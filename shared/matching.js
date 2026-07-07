@@ -73,3 +73,45 @@ function findMatchingGigs(gigs, condition, maxRadiusKm = DEFAULT_MATCH_RADIUS_KM
         .sort((a, b) => a.distanceKm - b.distanceKm)
         .map(({ gig, distanceKm }) => ({ ...gig, distanceKm }));
 }
+
+// --- Employer-side auto-match: random pick among seekers whose registered weekly
+// availability covers the gig's day/time (and who are within the match radius). ---
+function findEligibleSeekers(candidates, dayName, gig, maxRadiusKm = DEFAULT_MATCH_RADIUS_KM) {
+    return candidates
+        .filter(seeker => isSeekerAvailable(seeker.availability, dayName, gig.startTime, gig.endTime))
+        .map(seeker => ({ seeker, distanceKm: getDistanceKm(seeker.location, gig.location) }))
+        .filter(({ distanceKm }) => distanceKm !== null && distanceKm <= maxRadiusKm)
+        .map(({ seeker, distanceKm }) => ({ ...seeker, distanceKm }));
+}
+
+function pickRandom(list) {
+    if (!list || list.length === 0) return null;
+    return list[Math.floor(Math.random() * list.length)];
+}
+
+// --- Cancellation cutoff / penalty rules ---
+// Shifts are always "today" in this MVP (no date picker yet), so the cutoff is
+// computed against the real current time on the day's HH:MM.
+const CANCEL_CUTOFF_HOURS = 1;
+const PENALTY_RATE = 0.3;       // 30% of the shift's total pay
+const PENALTY_SEEKER_SHARE = 0.5; // seeker keeps half the penalty, platform keeps the other half
+
+function shiftStartDate(startTime) {
+    const [h, m] = startTime.split(':').map(Number);
+    const d = new Date();
+    d.setHours(h, m, 0, 0);
+    return d;
+}
+
+function isPastCancelCutoff(startTime, cutoffHours = CANCEL_CUTOFF_HOURS) {
+    const cutoff = new Date(shiftStartDate(startTime).getTime() - cutoffHours * 60 * 60 * 1000);
+    return new Date() >= cutoff;
+}
+
+function calculatePenalty(gig) {
+    const total = gig.pay * calculateHours(gig.startTime, gig.endTime);
+    const penalty = Math.round(total * PENALTY_RATE);
+    const seekerShare = Math.round(penalty * PENALTY_SEEKER_SHARE);
+    const platformShare = penalty - seekerShare;
+    return { penalty, seekerShare, platformShare };
+}

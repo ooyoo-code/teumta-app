@@ -189,6 +189,14 @@
                     </div>
                 </div>
 
+                <!-- Recurring Weekly Availability Registration -->
+                <div class="schedule-card card">
+                    <h3><i class="fa-solid fa-calendar-week icon-navy"></i> 정기 근무 가능 시간 등록</h3>
+                    <p class="section-desc">미리 등록해두면 사장님이 긴급 구인을 올리고 자동매칭할 때, 조건에 맞는 후보로 자동 등록되어 랜덤으로 매칭될 수 있어요.</p>
+                    <div id="availability-grid" class="availability-grid"></div>
+                    <button id="btn-save-availability" class="btn-secondary-full"><i class="fa-solid fa-floppy-disk"></i> 근무 가능 시간 저장</button>
+                </div>
+
                 <!-- Matches / Active Jobs -->
                 <div class="active-jobs-section">
                     <h3><i class="fa-solid fa-clipboard-list icon-navy"></i> 나의 매칭/근무 현황</h3>
@@ -234,6 +242,7 @@
     </div>
 
     <!-- Application Logic -->
+    <script src="../shared/seekers.js"></script>
     <script src="../shared/matching.js"></script>
     <script src="../shared/db.js"></script>
     <script src="app.js"></script>

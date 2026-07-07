@@ -1,10 +1,8 @@
 /**
  * 틈타 (Teumta) - Seeker App Logic
- * Data comes from ../shared/db.js (localStorage + cross-tab sync today, Firestore-ready shape).
- * Matching math comes from ../shared/matching.js.
+ * Data comes from ../shared/db.js. Matching math from ../shared/matching.js.
+ * Seeker pool / weekly-availability helpers from ../shared/seekers.js.
  */
-
-const CURRENT_SEEKER_NAME = '홍길동';
 
 // --- Toast Alert Helper ---
 function showToast(message, type = 'info') {
@@ -53,30 +51,8 @@ window.resetSeekerHero = function() {
 
 function renderHeroResult(state) {
     const panel = document.getElementById('seeker-hero-result');
+    const lastMatched = [...state.gigs].reverse().find(g => g.workerIsMe && g.status === 'matched');
 
-    if (state.seekerReservation) {
-        const r = state.seekerReservation;
-        panel.innerHTML = `
-            <div class="result-card">
-                <span class="result-badge pending"><i class="fa-solid fa-hourglass-half"></i> 예약 대기 중</span>
-                <div class="result-headline">지금은 딱 맞는 자리가 없어요</div>
-                <p class="result-sub">조건에 맞는 긴급 구인이 새로 등록되면 AI가 즉시 자동으로 매칭해드려요.</p>
-                <div class="result-job-card pending-card">
-                    <div class="detail-item"><i class="fa-solid fa-briefcase"></i> ${r.jobType === 'all' ? '전체 업종' : r.jobType}</div>
-                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${r.startTime} ~ ${r.endTime}</div>
-                    <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${r.location} 반경 ${r.radiusKm}km</div>
-                </div>
-                <div class="result-actions">
-                    <button class="btn-hero-secondary" onclick="handleCancelReservation()"><i class="fa-solid fa-xmark"></i> 예약 취소</button>
-                    <button class="btn-hero-primary" onclick="resetSeekerHero()"><i class="fa-solid fa-rotate"></i> 조건 다시 설정</button>
-                </div>
-            </div>
-        `;
-        setHeroStage('result');
-        return;
-    }
-
-    const lastMatched = [...state.gigs].reverse().find(g => g.workerName === CURRENT_SEEKER_NAME && g.status === 'matched');
     if (!lastMatched) {
         setHeroStage('idle');
         return;
@@ -86,7 +62,7 @@ function renderHeroResult(state) {
         <div class="result-card">
             <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
             <div class="result-headline">${lastMatched.title} 매칭 완료!</div>
-            <p class="result-sub">면접 없이 즉시 확정되었어요. 근무 시간에 맞춰 출근 체크만 하면 끝!</p>
+            <p class="result-sub">면접 없이 즉시 확정되었어요. 근무 시작 1시간 전까지는 취소할 수 있어요.</p>
             <div class="result-job-card">
                 <div class="job-header">
                     <div class="job-badge-area">
@@ -106,8 +82,82 @@ function renderHeroResult(state) {
     setHeroStage('result');
 }
 
+// --- Notify once per newly-created match (covers matches made by the employer's auto-match too) ---
+let notifiedMatchIds = null;
+function checkForNewMatches(state) {
+    const currentIds = new Set(state.gigs.filter(g => g.workerIsMe && g.status === 'matched').map(g => g.id));
+    if (notifiedMatchIds === null) {
+        notifiedMatchIds = currentIds; // seed silently on first load, don't notify for pre-existing matches
+        return;
+    }
+    currentIds.forEach(id => {
+        if (!notifiedMatchIds.has(id)) {
+            const gig = state.gigs.find(g => g.id === id);
+            showToast(`🎉 '${gig.title}' 알바에 매칭되었습니다! 근무 시작 1시간 전까지는 취소할 수 있어요.`, 'success');
+        }
+    });
+    notifiedMatchIds = currentIds;
+}
+
+// --- Weekly Availability Grid (rendered once; not re-rendered on unrelated state changes) ---
+const AVAIL_TIME_OPTIONS = ['00:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '24:00'];
+
+function timeOptionsHtml(selected) {
+    return AVAIL_TIME_OPTIONS.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${t}</option>`).join('');
+}
+
+function renderAvailabilityGrid(availability) {
+    const container = document.getElementById('availability-grid');
+    container.innerHTML = WEEK_DAYS.map(day => {
+        const d = availability[day] || { enabled: false, fullDay: false, start: '09:00', end: '18:00' };
+        return `
+            <div class="avail-row" data-day="${day}">
+                <label class="avail-day-toggle">
+                    <input type="checkbox" class="avail-enabled" ${d.enabled ? 'checked' : ''}>
+                    <span>${day}</span>
+                </label>
+                <div class="avail-time-range">
+                    <select class="avail-start" ${d.fullDay ? 'disabled' : ''}>${timeOptionsHtml(d.start)}</select>
+                    <span class="time-separator">~</span>
+                    <select class="avail-end" ${d.fullDay ? 'disabled' : ''}>${timeOptionsHtml(d.end)}</select>
+                </div>
+                <label class="avail-fulltime-toggle">
+                    <input type="checkbox" class="avail-fulltime" ${d.fullDay ? 'checked' : ''}> 풀타임
+                </label>
+            </div>
+        `;
+    }).join('');
+
+    container.querySelectorAll('.avail-row').forEach(row => {
+        const fulltimeCb = row.querySelector('.avail-fulltime');
+        const startSel = row.querySelector('.avail-start');
+        const endSel = row.querySelector('.avail-end');
+        fulltimeCb.addEventListener('change', () => {
+            startSel.disabled = fulltimeCb.checked;
+            endSel.disabled = fulltimeCb.checked;
+        });
+    });
+}
+
+document.getElementById('btn-save-availability').addEventListener('click', () => {
+    const availability = {};
+    document.querySelectorAll('#availability-grid .avail-row').forEach(row => {
+        const day = row.dataset.day;
+        availability[day] = {
+            enabled: row.querySelector('.avail-enabled').checked,
+            fullDay: row.querySelector('.avail-fulltime').checked,
+            start: row.querySelector('.avail-start').value,
+            end: row.querySelector('.avail-end').value
+        };
+    });
+    db.saveSeekerAvailability(availability);
+    showToast('정기 근무 가능 시간이 저장되었습니다. 조건에 맞는 긴급 구인이 등록되면 자동 매칭 후보가 돼요.', 'success');
+});
+
 // --- Render ---
 function render(state) {
+    checkForNewMatches(state);
+
     document.getElementById('seeker-earnings').textContent = state.seekerEarnings.toLocaleString();
 
     document.getElementById('seeker-start-time').value = state.seekerSchedule.startTime;
@@ -120,35 +170,11 @@ function render(state) {
 
     renderHeroResult(state);
 
-    // My active / finished gigs (+ pending reservation)
+    // My active / finished gigs
     const activeList = document.getElementById('seeker-active-list');
-    const myGigs = state.gigs.filter(g => g.workerName === CURRENT_SEEKER_NAME);
+    const myGigs = state.gigs.filter(g => g.workerIsMe);
 
-    let reservationHtml = '';
-    if (state.seekerReservation) {
-        const r = state.seekerReservation;
-        reservationHtml = `
-            <div class="job-card reservation-card">
-                <div class="job-header">
-                    <div class="job-badge-area">
-                        <span class="job-title"><i class="fa-solid fa-hourglass-half"></i> 예약 대기 중</span>
-                        <span class="job-employer">${r.jobType === 'all' ? '전체 업종' : r.jobType} · ${r.location} 반경 ${r.radiusKm}km</span>
-                    </div>
-                    <span class="status-tag status-waiting"><i class="fa-solid fa-clock-rotate-left"></i> 자동 매칭 대기</span>
-                </div>
-                <div class="job-details">
-                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${r.startTime} ~ ${r.endTime}</div>
-                    <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${r.location}</div>
-                </div>
-                <p class="job-desc">지금은 조건에 맞는 일자리가 없어요. 조건에 맞는 긴급 구인이 새로 등록되면 즉시 자동으로 매칭해드립니다.</p>
-                <div class="job-footer">
-                    <button class="btn-secondary" onclick="handleCancelReservation()"><i class="fa-solid fa-xmark"></i> 예약 취소</button>
-                </div>
-            </div>
-        `;
-    }
-
-    if (myGigs.length === 0 && !reservationHtml) {
+    if (myGigs.length === 0) {
         activeList.innerHTML = `
             <div class="empty-state">
                 <i class="fa-solid fa-calendar-minus"></i>
@@ -156,13 +182,19 @@ function render(state) {
             </div>
         `;
     } else {
-        activeList.innerHTML = reservationHtml + myGigs.map(gig => {
+        activeList.innerHTML = myGigs.map(gig => {
             let statusLabel = '';
             let actionBtn = '';
+            let cancelBtn = '';
 
             if (gig.status === 'matched') {
                 statusLabel = `<span class="status-tag status-matched"><i class="fa-solid fa-handshake"></i> 매칭완료</span>`;
                 actionBtn = `<button class="btn-action-green" onclick="handleStartWork('${gig.id}')"><i class="fa-solid fa-play"></i> 출근 체크</button>`;
+                if (isPastCancelCutoff(gig.startTime)) {
+                    cancelBtn = `<span class="detail-item cancel-locked-note"><i class="fa-solid fa-lock"></i> 출근 1시간 전이라 취소할 수 없어요</span>`;
+                } else {
+                    cancelBtn = `<button class="btn-cancel-teumta" onclick="handleSeekerCancel('${gig.id}')">틈타 취소</button>`;
+                }
             } else if (gig.status === 'working') {
                 statusLabel = `<span class="status-tag status-working"><i class="fa-solid fa-person-digging"></i> 근무중</span>`;
                 actionBtn = `<button class="btn-action-green" onclick="handleEndWork('${gig.id}')"><i class="fa-solid fa-stop"></i> 퇴근 체크</button>`;
@@ -188,6 +220,7 @@ function render(state) {
                         ${statusLabel}
                         ${actionBtn}
                     </div>
+                    ${cancelBtn ? `<div class="job-footer">${cancelBtn}</div>` : ''}
                 </div>
             `;
         }).join('');
@@ -255,26 +288,19 @@ document.getElementById('btn-realtime-match').addEventListener('click', () => {
         const candidates = findMatchingGigs(state.gigs, condition, radiusKm);
 
         if (candidates.length > 0) {
-            // Candidates are already sorted closest-first; prefer the best pay among the 2 closest
             const top = candidates.slice(0, 2).sort((a, b) => b.pay - a.pay)[0];
-            db.matchGig(top.id, CURRENT_SEEKER_NAME, 4.9);
+            db.assignGig(top.id, { name: db.ME_NAME, trustScore: state.seekerProfile.trustScore, bio: state.seekerProfile.bio });
             showToast(`⚡ 실시간 매칭 성공! '${top.title}' (${top.employer}, ${top.distanceKm.toFixed(1)}km) 근무가 면접 없이 즉시 확정되었습니다.`, 'success');
         } else {
-            db.setReservation(condition);
-            showToast('지금 당장 매칭 가능한 일자리가 없어 예약을 걸어두었습니다. 조건에 맞는 알바가 등록되면 자동으로 매칭해드릴게요!', 'info');
+            showToast('지금 당장 매칭 가능한 일자리가 없어요. 정기 근무 가능 시간을 등록해두시면, 나중에 조건에 맞는 구인이 올라올 때 자동으로 매칭 후보가 됩니다!', 'info');
+            setHeroStage('idle');
         }
-        // db mutation triggers the subscribed render() automatically
     }, 1400);
 });
 
-window.handleCancelReservation = function() {
-    db.clearReservation();
-    showToast('예약이 취소되었습니다.', 'info');
-    setHeroStage('idle');
-};
-
 window.handleQuickApply = function(gigId) {
-    db.matchGig(gigId, CURRENT_SEEKER_NAME, 4.9);
+    const state = db.getState();
+    db.assignGig(gigId, { name: db.ME_NAME, trustScore: state.seekerProfile.trustScore, bio: state.seekerProfile.bio });
     showToast('축하합니다! 틈새 알바가 즉시 매칭되었습니다. 면접 없이 확정되었습니다.', 'success');
 };
 
@@ -286,6 +312,32 @@ window.handleStartWork = function(gigId) {
 window.handleEndWork = function(gigId) {
     db.endWork(gigId);
     showToast('퇴근 도장이 찍혔습니다. 사장님 승인 후 정산됩니다.', 'info');
+};
+
+// Seeker-initiated cancel: only allowed before the 1hr-before-shift cutoff.
+// Per spec, cancelling immediately frees the slot up for another candidate.
+window.handleSeekerCancel = function(gigId) {
+    const state = db.getState();
+    const gig = state.gigs.find(g => g.id === gigId);
+    if (!gig) return;
+
+    if (isPastCancelCutoff(gig.startTime)) {
+        showToast('출근 1시간 전에는 취소할 수 없습니다.', 'info');
+        return;
+    }
+    if (!confirm('정말 이 근무를 취소하시겠습니까? 취소하면 다른 구직자에게 자리가 넘어갑니다.')) return;
+
+    db.cancelBySeeker(gigId);
+    showToast('매칭이 취소되었습니다. 다른 구직자를 찾는 중이에요...', 'info');
+
+    // Re-run auto-match among the mock pool (the cancelling seeker is naturally excluded).
+    setTimeout(() => {
+        const freshGig = db.getState().gigs.find(g => g.id === gigId);
+        if (!freshGig || freshGig.status !== 'waiting') return;
+        const eligible = findEligibleSeekers(MOCK_SEEKERS, freshGig.dayOfWeek, freshGig);
+        const picked = pickRandom(eligible);
+        if (picked) db.assignGig(gigId, picked);
+    }, 1200);
 };
 
 // --- Simulator Utilities ---
@@ -301,8 +353,10 @@ function initSimulator() {
     document.getElementById('btn-sim-reset').addEventListener('click', () => {
         if (confirm('모든 데이터를 초기화하시겠습니까? (구직자/사장님 앱 양쪽 모두 초기화됩니다)')) {
             db.resetToDefault();
+            notifiedMatchIds = null;
             showToast('데이터가 초기화되었습니다.', 'info');
             setHeroStage('idle');
+            renderAvailabilityGrid(db.getState().seekerProfile.availability);
         }
     });
 
@@ -324,5 +378,6 @@ function calculateHours(startTime, endTime) {
 // --- App Entrypoint ---
 window.addEventListener('DOMContentLoaded', () => {
     initSimulator();
+    renderAvailabilityGrid(db.getState().seekerProfile.availability);
     db.subscribe(render);
 });
