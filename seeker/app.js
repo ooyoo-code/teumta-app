@@ -190,7 +190,7 @@ function render(state) {
             if (gig.status === 'matched') {
                 statusLabel = `<span class="status-tag status-matched"><i class="fa-solid fa-handshake"></i> 매칭완료</span>`;
                 actionBtn = `<button class="btn-action-green" onclick="handleStartWork('${gig.id}')"><i class="fa-solid fa-play"></i> 출근 체크</button>`;
-                if (isPastCancelCutoff(gig.startTime)) {
+                if (isPastCancelCutoff(gig)) {
                     cancelBtn = `<span class="detail-item cancel-locked-note"><i class="fa-solid fa-lock"></i> 출근 1시간 전이라 취소할 수 없어요</span>`;
                 } else {
                     cancelBtn = `<button class="btn-cancel-teumta" onclick="handleSeekerCancel('${gig.id}')">틈타 취소</button>`;
@@ -213,7 +213,7 @@ function render(state) {
                         <div class="pay-badge"><i class="fa-solid fa-coins"></i> 시급 ${gig.pay.toLocaleString()}원</div>
                     </div>
                     <div class="job-details">
-                        <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
+                        <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
                         <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                     </div>
                     <div class="job-footer" style="align-items: center; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top:10px;">
@@ -249,7 +249,7 @@ function render(state) {
                     <div class="pay-badge"><i class="fa-solid fa-coins"></i> 시급 ${gig.pay.toLocaleString()}원</div>
                 </div>
                 <div class="job-details">
-                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
                     <div class="detail-item"><i class="fa-solid fa-route"></i> 내 위치에서 ${gig.distanceKm.toFixed(1)}km</div>
                 </div>
                 <p class="job-desc">${gig.description}</p>
@@ -321,7 +321,7 @@ window.handleSeekerCancel = function(gigId) {
     const gig = state.gigs.find(g => g.id === gigId);
     if (!gig) return;
 
-    if (isPastCancelCutoff(gig.startTime)) {
+    if (isPastCancelCutoff(gig)) {
         showToast('출근 1시간 전에는 취소할 수 없습니다.', 'info');
         return;
     }

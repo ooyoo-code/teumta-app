@@ -101,7 +101,7 @@ function renderHeroResult(gigId) {
                     </div>
                     ${trustBarHtml(gig.workerRating)}
                     ${gig.workerBio ? `<p class="job-desc">${gig.workerBio}</p>` : ''}
-                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime}</div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)}</div>
                     <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                 </div>
                 <div class="result-actions">
@@ -122,7 +122,7 @@ function renderHeroResult(gigId) {
                         </div>
                         <div class="pay-badge"><i class="fa-solid fa-coins"></i> 시급 ${gig.pay.toLocaleString()}원</div>
                     </div>
-                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime}</div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)}</div>
                     <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                 </div>
                 <div class="result-actions">
@@ -175,7 +175,7 @@ function render(state) {
                 ${trustBarHtml(gig.workerRating)}
                 ${gig.workerBio ? `<p class="job-desc">${gig.workerBio}</p>` : ''}
             `;
-            const cutoffPassed = isPastCancelCutoff(gig.startTime);
+            const cutoffPassed = isPastCancelCutoff(gig);
             cancelBtn = `<button class="btn-cancel-teumta" onclick="handleEmployerCancel('${gig.id}')">${cutoffPassed ? '취소 (위약금 발생)' : '취소'}</button>`;
         } else if (gig.status === 'working') {
             statusBadge = `<span class="status-tag status-working"><i class="fa-solid fa-person-digging"></i> 현재 근무 중</span>`;
@@ -211,7 +211,7 @@ function render(state) {
                     ${statusBadge}
                 </div>
                 <div class="job-details">
-                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
                     <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                 </div>
                 ${workerPanel}
@@ -222,16 +222,44 @@ function render(state) {
 }
 
 // --- Actions ---
+// Date field defaults to today and can't go into the past; the day-of-week badge
+// is derived from it automatically (no separate day picker needed).
+function todayDateStr() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function updateGigDayLabel() {
+    const dateVal = document.getElementById('gig-date').value;
+    document.getElementById('gig-day-label').textContent = dateVal ? koreanDayFromDateStr(dateVal) : '-';
+}
+
+function resetGigDateField() {
+    const dateInput = document.getElementById('gig-date');
+    const todayStr = todayDateStr();
+    dateInput.min = todayStr;
+    dateInput.value = todayStr;
+    updateGigDayLabel();
+}
+
+document.getElementById('gig-date').addEventListener('change', updateGigDayLabel);
+
 document.getElementById('gig-form').addEventListener('submit', (e) => {
     e.preventDefault();
 
     const title = document.getElementById('gig-title').value;
     const pay = parseInt(document.getElementById('gig-hourly-pay').value);
+    const date = document.getElementById('gig-date').value;
     const startTime = document.getElementById('gig-start-time').value;
     const endTime = document.getElementById('gig-end-time').value;
     const location = document.getElementById('gig-location').value;
     const description = document.getElementById('gig-description').value || '추가 지침이 없습니다.';
 
+    if (!date) {
+        showToast('근무 날짜를 선택해주세요.', 'toast');
+        return;
+    }
     const [startH] = startTime.split(':').map(Number);
     const [endH] = endTime.split(':').map(Number);
     if (startH >= endH) {
@@ -240,11 +268,14 @@ document.getElementById('gig-form').addEventListener('submit', (e) => {
     }
 
     const gig = db.postGig({
-        title, employer: '역삼 틈새 카페', pay, startTime, endTime, location, description
+        title, employer: '역삼 틈새 카페', pay,
+        date, dayOfWeek: koreanDayFromDateStr(date),
+        startTime, endTime, location, description
     });
 
     showToast('긴급 구인 공고가 등록되었습니다. 실시간으로 매칭이 시작됩니다.', 'employer');
     document.getElementById('gig-form').reset();
+    resetGigDateField();
 
     setHeroStage('searching');
 
@@ -271,7 +302,7 @@ window.handleEmployerCancel = function(gigId) {
     const gig = db.getState().gigs.find(g => g.id === gigId);
     if (!gig) return;
 
-    if (gig.status === 'matched' && isPastCancelCutoff(gig.startTime)) {
+    if (gig.status === 'matched' && isPastCancelCutoff(gig)) {
         const { penalty, seekerShare, platformShare } = calculatePenalty(gig);
         const ok = confirm(
             `출근 1시간 이내 취소는 위약금이 발생합니다.\n\n` +
@@ -332,5 +363,6 @@ function calculateHours(startTime, endTime) {
 // --- App Entrypoint ---
 window.addEventListener('DOMContentLoaded', () => {
     initSimulator();
+    resetGigDateField();
     db.subscribe(render);
 });

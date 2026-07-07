@@ -14,6 +14,12 @@ function todayKoreanDay() {
     return JS_DAY_TO_KOREAN[new Date().getDay()];
 }
 
+// dateStr is a "YYYY-MM-DD" string (e.g. from an <input type="date">).
+function koreanDayFromDateStr(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return JS_DAY_TO_KOREAN[d.getDay()];
+}
+
 function emptyWeeklyAvailability() {
     const availability = {};
     WEEK_DAYS.forEach(day => {

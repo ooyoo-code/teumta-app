@@ -52,6 +52,16 @@ function isJobTypeMatch(jobType, gigTitle) {
     return jobType === 'all' || jobType === gigTitle;
 }
 
+// "7/8(수) 12:00 ~ 15:00" when the gig carries a date, otherwise just the time range
+// (older/mock data that predates the date field).
+function formatGigSchedule(gig) {
+    if (gig.date) {
+        const [, m, d] = gig.date.split('-');
+        return `${parseInt(m, 10)}/${parseInt(d, 10)}(${gig.dayOfWeek}) ${gig.startTime} ~ ${gig.endTime}`;
+    }
+    return `${gig.startTime} ~ ${gig.endTime}`;
+}
+
 function calculateHours(startTime, endTime) {
     const [startH, startM] = startTime.split(':').map(Number);
     const [endH, endM] = endTime.split(':').map(Number);
@@ -96,15 +106,16 @@ const CANCEL_CUTOFF_HOURS = 1;
 const PENALTY_RATE = 0.3;       // 30% of the shift's total pay
 const PENALTY_SEEKER_SHARE = 0.5; // seeker keeps half the penalty, platform keeps the other half
 
-function shiftStartDate(startTime) {
-    const [h, m] = startTime.split(':').map(Number);
-    const d = new Date();
+// `gig.date` is a "YYYY-MM-DD" string; falls back to today for any older data that predates it.
+function shiftStartDate(gig) {
+    const [h, m] = gig.startTime.split(':').map(Number);
+    const d = gig.date ? new Date(gig.date + 'T00:00:00') : new Date();
     d.setHours(h, m, 0, 0);
     return d;
 }
 
-function isPastCancelCutoff(startTime, cutoffHours = CANCEL_CUTOFF_HOURS) {
-    const cutoff = new Date(shiftStartDate(startTime).getTime() - cutoffHours * 60 * 60 * 1000);
+function isPastCancelCutoff(gig, cutoffHours = CANCEL_CUTOFF_HOURS) {
+    const cutoff = new Date(shiftStartDate(gig).getTime() - cutoffHours * 60 * 60 * 1000);
     return new Date() >= cutoff;
 }
 
