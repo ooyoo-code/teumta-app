@@ -1,8 +1,25 @@
-# ⚡ 틈타 (Sukima Baito) - 초단기 틈새 알바 매칭 플랫폼 MVP
+# ⚡ 틈타 (Teumta) - AI 초단기 일자리 매칭 플랫폼 MVP
 
 본 프로젝트는 일본의 검증된 '스키마 바이토(틈새 시간 초단기 알바)' 모델을 한국 시장에 적용하기 위한 MVP(Minimum Viable Product, 최소 기능 제품) 프로토타입입니다.
 
 개인의 **남는 시간/위치**와 사장님의 **갑작스러운 구인 요청**을 면접 없이 1초 만에 실시간으로 매칭하는 핵심 사용자 흐름(Core Loop)을 완벽히 시뮬레이션할 수 있습니다.
+
+## 📂 프로젝트 구조
+
+실제 출시 형태(구직자 앱 / 사장님 앱 분리)와 동일하게 두 개의 독립된 앱으로 구성되어 있습니다.
+
+```
+teumta-app/
+├── index.html        # 앱 선택(구직자/사장님) 랜딩 페이지
+├── seeker/           # 구직자 앱
+├── employer/         # 사장님 앱
+└── shared/           # 두 앱이 공유하는 스타일 · 매칭 엔진 · 데이터 레이어
+    ├── style.css
+    ├── matching.js   # 시간/거리(하버사인 공식)/업종 매칭 로직
+    └── db.js         # 데이터 레이어 (현재 localStorage, Firestore로 교체 예정)
+```
+
+`shared/db.js`는 오늘은 `localStorage` + 브라우저 `storage` 이벤트로 두 앱이 같은 브라우저의 서로 다른 탭에서 실시간으로 동기화되도록 만들어졌고, 추후 Firebase(Firestore)로 교체해도 `seeker/app.js`·`employer/app.js`는 거의 수정할 필요가 없도록 설계했습니다.
 
 ---
 

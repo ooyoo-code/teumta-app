@@ -86,7 +86,9 @@ body {
     border-bottom: 1px solid var(--border-color);
     padding: 16px 20px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     gap: 12px;
 }
 
@@ -127,40 +129,106 @@ body {
     text-transform: uppercase;
 }
 
-.mode-toggle-container {
+.app-switch-link {
     display: flex;
-    background: #F3F4F6;
-    border-radius: 12px;
-    padding: 4px;
-    border: 1px solid var(--border-color);
-}
-
-.mode-btn {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
-    padding: 10px 0;
-    border-radius: 9px;
-    cursor: pointer;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    display: flex;
-    justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-decoration: none;
+    background: #F3F4F6;
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    border-radius: 10px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
-.mode-btn:hover {
+.app-switch-link:hover {
+    background: var(--bg-card-hover);
     color: var(--text-primary);
 }
 
-.mode-btn.active {
-    background: var(--theme-gradient);
-    color: white;
-    box-shadow: 0 4px 12px var(--theme-primary-glow);
+/* Root chooser landing page */
+.chooser-hero {
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.chooser-hero .hero-title {
+    margin-bottom: 10px;
+}
+
+.chooser-hero .hero-desc {
+    margin-bottom: 28px;
+}
+
+.chooser-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    text-decoration: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 18px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-card);
+    transition: all 0.2s ease;
+}
+
+.chooser-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent-gold-deep);
+}
+
+.chooser-card .chooser-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: #FFF7E0;
+    color: var(--accent-gold-deep);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.chooser-card.employer .chooser-icon {
+    background: #EFE7DD;
+    color: var(--accent-navy);
+}
+
+.chooser-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: left;
+    flex: 1;
+}
+
+.chooser-label {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.chooser-sub {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.chooser-arrow {
+    color: var(--text-muted);
+}
+
+.chooser-note {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 10px;
+    line-height: 1.5;
 }
 
 /* 4. Card System */

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>틈타 구직자 - AI 실시간 틈새 알바 매칭</title>
+    <!-- Google Fonts & Icon -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="../shared/style.css">
+</head>
+<body>
+    <!-- App Container -->
+    <div class="app-container">
+
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <svg class="coin-clock-icon logo-coin" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <radialGradient id="coinGradHeader" cx="35%" cy="30%" r="75%">
+                            <stop offset="0%" stop-color="#FFF6E3"/>
+                            <stop offset="45%" stop-color="#FFD54F"/>
+                            <stop offset="100%" stop-color="#FFB300"/>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="50" cy="50" r="46" fill="url(#coinGradHeader)" stroke="#FFB300" stroke-width="3"/>
+                    <g stroke="#4A341E" stroke-width="4" stroke-linecap="round">
+                        <line x1="50" y1="11" x2="50" y2="19"/>
+                        <line x1="50" y1="81" x2="50" y2="89"/>
+                        <line x1="11" y1="50" x2="19" y2="50"/>
+                        <line x1="81" y1="50" x2="89" y2="50"/>
+                    </g>
+                    <text x="50" y="65" text-anchor="middle" font-size="44" font-weight="800" fill="#4A341E" font-family="Inter, Arial, sans-serif">₩</text>
+                </svg>
+                <h1>틈타 <span class="logo-beta">구직자</span></h1>
+            </div>
+            <a href="../employer/" class="app-switch-link"><i class="fa-solid fa-right-left"></i> 사장님 앱으로</a>
+        </header>
+
+        <!-- Notification Bar (Toast) -->
+        <div id="notification-container" class="notification-container"></div>
+
+        <!-- Main Content -->
+        <main class="app-main">
+
+            <section id="seeker-view" class="view-section active">
+
+                <!-- ================= AI Real-time Matching Hero (Landing Screen) ================= -->
+                <div class="match-hero">
+
+                    <!-- Idle State: condition input + CTA -->
+                    <div id="seeker-hero-idle" class="hero-stage hero-idle active">
+                        <div class="hero-coin-wrap">
+                            <svg class="coin-clock-icon hero-coin" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <radialGradient id="coinGradIdle" cx="35%" cy="30%" r="75%">
+                                        <stop offset="0%" stop-color="#FFF6E3"/>
+                                        <stop offset="45%" stop-color="#FFD54F"/>
+                                        <stop offset="100%" stop-color="#FFB300"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="50" cy="50" r="46" fill="url(#coinGradIdle)" stroke="#FFB300" stroke-width="3"/>
+                                <g stroke="#4A341E" stroke-width="3.5" stroke-linecap="round">
+                                    <line x1="50" y1="11" x2="50" y2="19"/>
+                                    <line x1="50" y1="81" x2="50" y2="89"/>
+                                    <line x1="11" y1="50" x2="19" y2="50"/>
+                                    <line x1="81" y1="50" x2="89" y2="50"/>
+                                </g>
+                                <text x="50" y="65" text-anchor="middle" font-size="44" font-weight="800" fill="#4A341E" font-family="Inter, Arial, sans-serif">₩</text>
+                            </svg>
+                        </div>
+
+                        <h2 class="hero-title">AI 실시간 매칭</h2>
+                        <p class="hero-desc">시간과 돈, 가장 소중한 두 가지를<br>AI가 1초 만에 이어드려요</p>
+
+                        <div class="hero-form">
+                            <div class="hero-form-row">
+                                <label><i class="fa-solid fa-clock"></i> 근무 가능 시간</label>
+                                <div class="time-range-picker">
+                                    <select id="seeker-start-time">
+                                        <option value="09:00">오전 09:00</option>
+                                        <option value="10:00">오전 10:00</option>
+                                        <option value="11:00" selected>오전 11:00</option>
+                                        <option value="12:00">오후 12:00</option>
+                                        <option value="13:00">오후 01:00</option>
+                                        <option value="14:00">오후 02:00</option>
+                                        <option value="15:00">오후 03:00</option>
+                                        <option value="18:00">오후 06:00</option>
+                                    </select>
+                                    <span class="time-separator">~</span>
+                                    <select id="seeker-end-time">
+                                        <option value="13:00">오후 01:00</option>
+                                        <option value="14:00">오후 02:00</option>
+                                        <option value="15:00" selected>오후 03:00</option>
+                                        <option value="17:00">오후 05:00</option>
+                                        <option value="18:00">오후 06:00</option>
+                                        <option value="20:00">오후 08:00</option>
+                                        <option value="22:00">오후 10:00</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="hero-form-row hero-form-grid-2">
+                                <div>
+                                    <label><i class="fa-solid fa-location-dot"></i> 현재 위치</label>
+                                    <select id="seeker-location">
+                                        <option value="강남구 역삼동" selected>강남구 역삼동</option>
+                                        <option value="서초구 서초동">서초구 서초동</option>
+                                        <option value="마포구 서교동">마포구 서교동</option>
+                                        <option value="성동구 성수동">성동구 성수동</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label><i class="fa-solid fa-briefcase"></i> 희망 업종</label>
+                                    <select id="seeker-job-type">
+                                        <option value="all" selected>전체 업종</option>
+                                        <option value="카페 홀 서빙">카페 홀 서빙</option>
+                                        <option value="바리스타 보조">바리스타 보조</option>
+                                        <option value="레스토랑 식기세척">레스토랑 식기세척</option>
+                                        <option value="편의점 물류 분류">편의점 물류 분류</option>
+                                        <option value="행사 주차 안내">행사 주차 안내</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="hero-form-row">
+                                <label><i class="fa-solid fa-map-location-dot"></i> 매칭 반경</label>
+                                <select id="seeker-radius">
+                                    <option value="1">1km 이내</option>
+                                    <option value="3" selected>3km 이내</option>
+                                    <option value="5">5km 이내</option>
+                                    <option value="10">10km 이내</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button id="btn-realtime-match" class="btn-match-cta">
+                            <i class="fa-solid fa-bolt"></i> AI 매칭 시작하기
+                        </button>
+                    </div>
+
+                    <!-- Searching State -->
+                    <div id="seeker-hero-searching" class="hero-stage hero-searching">
+                        <div class="radar-stage">
+                            <div class="radar-ring r1"></div>
+                            <div class="radar-ring r2"></div>
+                            <div class="radar-ring r3"></div>
+                            <svg class="coin-clock-icon radar-coin" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                                <defs>
+                                    <radialGradient id="coinGradSearch" cx="35%" cy="30%" r="75%">
+                                        <stop offset="0%" stop-color="#FFF6E3"/>
+                                        <stop offset="45%" stop-color="#FFD54F"/>
+                                        <stop offset="100%" stop-color="#FFB300"/>
+                                    </radialGradient>
+                                </defs>
+                                <circle cx="50" cy="50" r="46" fill="url(#coinGradSearch)" stroke="#FFB300" stroke-width="3"/>
+                                <g stroke="#4A341E" stroke-width="3.5" stroke-linecap="round">
+                                    <line x1="50" y1="11" x2="50" y2="19"/>
+                                    <line x1="50" y1="81" x2="50" y2="89"/>
+                                    <line x1="11" y1="50" x2="19" y2="50"/>
+                                    <line x1="81" y1="50" x2="89" y2="50"/>
+                                </g>
+                                <text x="50" y="65" text-anchor="middle" font-size="44" font-weight="800" fill="#4A341E" font-family="Inter, Arial, sans-serif">₩</text>
+                            </svg>
+                        </div>
+                        <p class="hero-status-text">AI가 실시간으로 매칭 중이에요<span class="dot-anim">...</span></p>
+                        <p class="hero-status-sub">반경 내 위치 · 시간 · 업종을 분석하고 있어요</p>
+                    </div>
+
+                    <!-- Result State (matched / reserved), filled dynamically -->
+                    <div id="seeker-hero-result" class="hero-stage hero-result"></div>
+
+                </div>
+
+                <!-- Wallet & Stats Dashboard -->
+                <div class="dashboard-card card">
+                    <div class="user-profile">
+                        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                        <div class="user-info">
+                            <span class="user-greeting">안녕하세요!</span>
+                            <span class="user-name">홍길동 님</span>
+                        </div>
+                    </div>
+                    <div class="wallet-info">
+                        <div class="wallet-label">이번 달 누적 급여</div>
+                        <div class="wallet-amount"><i class="fa-solid fa-coins"></i> <span id="seeker-earnings">0</span> 원</div>
+                    </div>
+                </div>
+
+                <!-- Matches / Active Jobs -->
+                <div class="active-jobs-section">
+                    <h3><i class="fa-solid fa-clipboard-list icon-navy"></i> 나의 매칭/근무 현황</h3>
+                    <div id="seeker-active-list" class="jobs-list">
+                        <div class="empty-state">
+                            <i class="fa-solid fa-calendar-minus"></i>
+                            <p>현재 매칭되었거나 대기 중인 근무 일정이 없습니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recommended Job Offers -->
+                <div class="recommended-jobs-section">
+                    <h3><i class="fa-solid fa-list-ul icon-navy"></i> 지금 열려 있는 다른 알바</h3>
+                    <p class="section-desc">면접 없이 카드를 눌러 바로 매칭할 수 있어요. 가까운 순으로 보여드려요.</p>
+                    <div id="seeker-job-list" class="jobs-list">
+                        <!-- Dynamic Content via JS -->
+                    </div>
+                </div>
+
+            </section>
+        </main>
+
+        <!-- Debug / Simulator Controller Utility Panel -->
+        <footer class="simulator-panel card">
+            <div class="simulator-header">
+                <span>🛠️ MVP 시뮬레이터 옵션</span>
+                <button id="btn-toggle-sim" class="btn-icon"><i class="fa-solid fa-chevron-up"></i></button>
+            </div>
+            <div id="sim-body" class="simulator-body active">
+                <p>MVP 검증을 원활하게 하기 위한 가상 데이터 매칭 시뮬레이터입니다. 사장님 앱을 다른 탭에서 열어두면 실시간으로 서로 연동됩니다.</p>
+                <div class="sim-actions">
+                    <button id="btn-sim-add-jobs" class="btn-secondary">
+                        <i class="fa-solid fa-magic"></i> 가상 구인 공고 3개 생성
+                    </button>
+                    <button id="btn-sim-reset" class="btn-danger">
+                        <i class="fa-solid fa-trash"></i> 전체 데이터 초기화
+                    </button>
+                </div>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Application Logic -->
+    <script src="../shared/matching.js"></script>
+    <script src="../shared/db.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

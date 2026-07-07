@@ -13,7 +13,7 @@ while ($listener.IsListening) {
     $req = $context.Request
     $res = $context.Response
     $path = $req.Url.LocalPath
-    if ($path -eq "/") { $path = "/index.html" }
+    if ($path.EndsWith("/")) { $path = $path + "index.html" }
     $filePath = Join-Path $Root $path.TrimStart("/")
 
     if (Test-Path $filePath -PathType Leaf) {
@@ -23,6 +23,9 @@ while ($listener.IsListening) {
             ".html" { "text/html" }
             ".css"  { "text/css" }
             ".js"   { "application/javascript" }
+            ".json" { "application/json" }
+            ".svg"  { "image/svg+xml" }
+            ".png"  { "image/png" }
             default { "application/octet-stream" }
         }
         $res.ContentType = $contentType
