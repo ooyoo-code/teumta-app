@@ -10,8 +10,10 @@ let state = {
     seekerSchedule: {
         startTime: '11:00',
         endTime: '15:00',
-        location: '강남구 역삼동'
+        location: '강남구 역삼동',
+        jobType: 'all'
     },
+    seekerReservation: null,
     seekerEarnings: 0
 };
 
@@ -81,8 +83,10 @@ function resetToDefault() {
     state.seekerSchedule = {
         startTime: '11:00',
         endTime: '15:00',
-        location: '강남구 역삼동'
+        location: '강남구 역삼동',
+        jobType: 'all'
     };
+    state.seekerReservation = null;
     state.seekerEarnings = 0;
     saveState();
 }
@@ -164,6 +168,21 @@ function isTimeWithin(seekerStart, seekerEnd, gigStart, gigEnd) {
     return (sStart <= gStart) && (sEnd >= gEnd);
 }
 
+function isJobTypeMatch(jobType, gigTitle) {
+    return jobType === 'all' || jobType === gigTitle;
+}
+
+// Find gigs that satisfy a seeker condition (time / location / job type), status must be 'waiting'
+function findMatchingGigs(condition) {
+    return state.gigs.filter(gig => {
+        if (gig.status !== 'waiting') return false;
+        const isTimeMatch = isTimeWithin(condition.startTime, condition.endTime, gig.startTime, gig.endTime);
+        const isLocationMatch = (gig.location === condition.location);
+        const isJobMatch = isJobTypeMatch(condition.jobType, gig.title);
+        return isTimeMatch && isLocationMatch && isJobMatch;
+    });
+}
+
 // --- 5. Render Seeker View ---
 function renderSeekerView() {
     // 1. Update Profile Dashboard
@@ -173,12 +192,37 @@ function renderSeekerView() {
     document.getElementById('seeker-start-time').value = state.seekerSchedule.startTime;
     document.getElementById('seeker-end-time').value = state.seekerSchedule.endTime;
     document.getElementById('seeker-location').value = state.seekerSchedule.location;
+    document.getElementById('seeker-job-type').value = state.seekerSchedule.jobType;
 
-    // 2. Render My Active & Finished Gigs
+    // 2. Render My Active & Finished Gigs (+ pending reservation, if any)
     const activeList = document.getElementById('seeker-active-list');
     const myGigs = state.gigs.filter(g => g.workerName === '홍길동');
-    
-    if (myGigs.length === 0) {
+
+    let reservationHtml = '';
+    if (state.seekerReservation) {
+        const r = state.seekerReservation;
+        reservationHtml = `
+            <div class="job-card reservation-card">
+                <div class="job-header">
+                    <div class="job-badge-area">
+                        <span class="job-title"><i class="fa-solid fa-hourglass-half"></i> 예약 대기 중</span>
+                        <span class="job-employer">${r.jobType === 'all' ? '전체 업종' : r.jobType} · ${r.location}</span>
+                    </div>
+                    <span class="status-tag status-waiting"><i class="fa-solid fa-clock-rotate-left"></i> 자동 매칭 대기</span>
+                </div>
+                <div class="job-details">
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${r.startTime} ~ ${r.endTime}</div>
+                    <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${r.location}</div>
+                </div>
+                <p class="job-desc">지금은 조건에 맞는 일자리가 없어요. 조건에 맞는 긴급 구인이 새로 등록되면 즉시 자동으로 매칭해드립니다.</p>
+                <div class="job-footer">
+                    <button class="btn-secondary" onclick="handleCancelReservation()"><i class="fa-solid fa-xmark"></i> 예약 취소</button>
+                </div>
+            </div>
+        `;
+    }
+
+    if (myGigs.length === 0 && !reservationHtml) {
         activeList.innerHTML = `
             <div class="empty-state">
                 <i class="fa-solid fa-calendar-minus"></i>
@@ -186,7 +230,7 @@ function renderSeekerView() {
             </div>
         `;
     } else {
-        activeList.innerHTML = myGigs.map(gig => {
+        activeList.innerHTML = reservationHtml + myGigs.map(gig => {
             let statusLabel = '';
             let actionBtn = '';
 
@@ -228,20 +272,8 @@ function renderSeekerView() {
     // 3. Render Recommended Gigs (Match engine simulation)
     const recommendedList = document.getElementById('seeker-job-list');
     
-    // Filter conditions: status = 'waiting' and (time overlaps) and (location matches)
-    const filteredGigs = state.gigs.filter(gig => {
-        if (gig.status !== 'waiting') return false;
-        
-        const isTimeMatch = isTimeWithin(
-            state.seekerSchedule.startTime,
-            state.seekerSchedule.endTime,
-            gig.startTime,
-            gig.endTime
-        );
-        const isLocationMatch = (gig.location === state.seekerSchedule.location);
-        
-        return isTimeMatch && isLocationMatch;
-    });
+    // Filter conditions: status = 'waiting' and (time overlaps) and (location matches) and (job type matches)
+    const filteredGigs = findMatchingGigs(state.seekerSchedule);
 
     if (filteredGigs.length === 0) {
         recommendedList.innerHTML = `
@@ -362,11 +394,12 @@ function renderEmployerView() {
 
 // --- 7. Business Action Handlers ---
 
-// Save Availability (Seeker)
-document.getElementById('btn-save-schedule').addEventListener('click', () => {
+// Real-time Matching (Seeker): instantly match if possible, otherwise auto-reserve
+document.getElementById('btn-realtime-match').addEventListener('click', () => {
     const startTime = document.getElementById('seeker-start-time').value;
     const endTime = document.getElementById('seeker-end-time').value;
     const location = document.getElementById('seeker-location').value;
+    const jobType = document.getElementById('seeker-job-type').value;
 
     // Validation
     const [startH] = startTime.split(':').map(Number);
@@ -376,11 +409,40 @@ document.getElementById('btn-save-schedule').addEventListener('click', () => {
         return;
     }
 
-    state.seekerSchedule = { startTime, endTime, location };
-    saveState();
-    showToast('근무 가능 일정 및 지역이 저장되었습니다. 매칭 목록이 갱신됩니다.', 'success');
+    const condition = { startTime, endTime, location, jobType };
+    state.seekerSchedule = condition;
+
+    const candidates = findMatchingGigs(condition);
+
+    if (candidates.length > 0) {
+        // Pick the best-paying match among candidates for instant matching
+        candidates.sort((a, b) => b.pay - a.pay);
+        const bestGig = candidates[0];
+        const gigIndex = state.gigs.findIndex(g => g.id === bestGig.id);
+
+        state.gigs[gigIndex].status = 'matched';
+        state.gigs[gigIndex].workerName = '홍길동';
+        state.gigs[gigIndex].workerRating = 4.9;
+        state.seekerReservation = null;
+
+        saveState();
+        showToast(`⚡ 실시간 매칭 성공! '${bestGig.title}' (${bestGig.employer}) 근무가 면접 없이 즉시 확정되었습니다.`, 'success');
+    } else {
+        state.seekerReservation = { ...condition, createdAt: Date.now() };
+        saveState();
+        showToast('지금 당장 매칭 가능한 일자리가 없어 예약을 걸어두었습니다. 조건에 맞는 알바가 등록되면 자동으로 매칭해드릴게요!', 'info');
+    }
+
     renderSeekerView();
 });
+
+// Cancel Pending Reservation (Seeker)
+window.handleCancelReservation = function() {
+    state.seekerReservation = null;
+    saveState();
+    showToast('예약이 취소되었습니다.', 'info');
+    renderSeekerView();
+};
 
 // Quick Apply (Seeker)
 window.handleQuickApply = function(gigId) {
@@ -479,17 +541,39 @@ document.getElementById('gig-form').addEventListener('submit', (e) => {
     state.gigs.push(newGig);
     saveState();
     showToast('긴급 구인 공고가 등록되었습니다. 실시간으로 매칭이 시작됩니다.', 'employer');
-    
-    // Simulate instant match if seeker criteria fits
-    simulateInstantMatch(newGig);
-    
+
+    // Auto-fulfill the seeker's reservation if this gig fits, otherwise just notify
+    handleNewGigPosted(newGig);
+
     renderEmployerView();
     document.getElementById('gig-form').reset();
 });
 
-// Simulate Instant Seeker Matching
-function simulateInstantMatch(gig) {
-    // Check if Seeker's current settings cover this new gig
+// Whenever a new gig is posted, check if it fulfills the seeker's pending reservation,
+// and auto-complete the match if so. Falls back to a soft notification otherwise.
+function handleNewGigPosted(gig) {
+    if (state.seekerReservation) {
+        const r = state.seekerReservation;
+        const isMatch = isTimeWithin(r.startTime, r.endTime, gig.startTime, gig.endTime)
+            && gig.location === r.location
+            && isJobTypeMatch(r.jobType, gig.title);
+
+        if (isMatch) {
+            const gigIndex = state.gigs.findIndex(g => g.id === gig.id);
+            state.gigs[gigIndex].status = 'matched';
+            state.gigs[gigIndex].workerName = '홍길동';
+            state.gigs[gigIndex].workerRating = 4.9;
+            state.seekerReservation = null;
+            saveState();
+
+            setTimeout(() => {
+                showToast(`⚡ 예약 자동 매칭 완료! 예약해두신 조건과 일치하는 '${gig.title}' 알바가 즉시 매칭되었습니다.`, 'success');
+            }, 800);
+            return true;
+        }
+    }
+
+    // No active reservation matched: just let the seeker know if it fits their last search
     const timeMatches = isTimeWithin(
         state.seekerSchedule.startTime,
         state.seekerSchedule.endTime,
@@ -497,13 +581,14 @@ function simulateInstantMatch(gig) {
         gig.endTime
     );
     const locationMatches = (gig.location === state.seekerSchedule.location);
+    const jobMatches = isJobTypeMatch(state.seekerSchedule.jobType, gig.title);
 
-    if (timeMatches && locationMatches) {
-        // Show notification to Seeker
+    if (timeMatches && locationMatches && jobMatches) {
         setTimeout(() => {
-            showToast(`⚡ 알림: 내 스케줄과 딱 맞는 '${gig.title}'이 새로 등록되었습니다!`, 'success');
+            showToast(`⚡ 알림: 내 조건과 딱 맞는 '${gig.title}'이 새로 등록되었습니다!`, 'info');
         }, 800);
     }
+    return false;
 }
 
 // --- 8. Simulator Utilities ---
@@ -578,7 +663,10 @@ function initSimulator() {
         state.gigs.push(...mockGigs);
         saveState();
         showToast('새로운 가상 구인 공고 3개가 생성되었습니다!', 'success');
-        
+
+        // Each newly generated gig can auto-fulfill a pending reservation
+        mockGigs.forEach(gig => handleNewGigPosted(gig));
+
         if (document.getElementById('btn-seeker').classList.contains('active')) {
             renderSeekerView();
         } else {

@@ -101,8 +101,19 @@
                                 <option value="성동구 성수동">성동구 성수동</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label><i class="fa-solid fa-briefcase"></i> 희망 업종</label>
+                            <select id="seeker-job-type">
+                                <option value="all" selected>전체 업종 (상관없음)</option>
+                                <option value="카페 홀 서빙">카페 홀 서빙</option>
+                                <option value="바리스타 보조">바리스타 보조</option>
+                                <option value="레스토랑 식기세척">레스토랑 식기세척</option>
+                                <option value="편의점 물류 분류">편의점 물류 분류</option>
+                                <option value="행사 주차 안내">행사 주차 안내</option>
+                            </select>
+                        </div>
                     </div>
-                    <button id="btn-save-schedule" class="btn-primary"><i class="fa-solid fa-check"></i> 설정 적용</button>
+                    <button id="btn-realtime-match" class="btn-primary btn-realtime"><i class="fa-solid fa-bolt"></i> 실시간 매칭하기</button>
                 </div>
 
                 <!-- Matches / Active Jobs -->
@@ -171,7 +182,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="gig-hourly-pay"><i class="fa-solid fa-coins"></i> 시급 (원)</label>
-                                <input type="number" id="gig-hourly-pay" value="12000" min="9860" step="100" required>
+                                <input type="number" id="gig-hourly-pay" value="12000" min="9860" step="10" required>
                             </div>
                             <div class="form-group">
                                 <label><i class="fa-solid fa-clock"></i> 근무 시간</label>
