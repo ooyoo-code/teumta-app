@@ -1,4 +1,4 @@
-# ⚡ 틈매 (Sukima Baito) - 초단기 틈새 알바 매칭 플랫폼 MVP
+# ⚡ 틈타 (Sukima Baito) - 초단기 틈새 알바 매칭 플랫폼 MVP
 
 본 프로젝트는 일본의 검증된 '스키마 바이토(틈새 시간 초단기 알바)' 모델을 한국 시장에 적용하기 위한 MVP(Minimum Viable Product, 최소 기능 제품) 프로토타입입니다.
 
