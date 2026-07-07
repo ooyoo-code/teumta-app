@@ -1,5 +1,5 @@
 /**
- * 틈매 (Sukima Baito) - Core Application Logic
+ * 틈타 (Teumta) - Core Application Logic
  */
 
 // --- 1. Data Store / State Management (Local Storage wrapper) ---
@@ -98,11 +98,11 @@ function showToast(message, type = 'info') {
 
     const toast = document.createElement('div');
     toast.className = `toast ${type}`;
-    
+
     let icon = '<i class="fa-solid fa-bell"></i>';
     if (type === 'success') icon = '<i class="fa-solid fa-circle-check"></i>';
     else if (type === 'employer') icon = '<i class="fa-solid fa-briefcase"></i>';
-    
+
     toast.innerHTML = `
         <div style="display: flex; align-items: center; gap: 10px;">
             ${icon}
@@ -111,14 +111,12 @@ function showToast(message, type = 'info') {
         <button class="toast-close">&times;</button>
     `;
 
-    // Close button event
     toast.querySelector('.toast-close').addEventListener('click', () => {
         toast.remove();
     });
 
     container.appendChild(toast);
 
-    // Auto dismiss
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.4s forwards';
         setTimeout(() => toast.remove(), 400);
@@ -151,7 +149,137 @@ function initViewSwitcher() {
     });
 }
 
-// --- 4. Time Overlap Logic Helper ---
+// --- 4. AI Matching Hero Stage Machine (idle / searching / result) ---
+function setHeroStage(mode, stage) {
+    const idle = document.getElementById(`${mode}-hero-idle`);
+    const searching = document.getElementById(`${mode}-hero-searching`);
+    const result = document.getElementById(`${mode}-hero-result`);
+
+    [idle, searching, result].forEach(el => el.classList.remove('active'));
+    if (stage === 'idle') idle.classList.add('active');
+    if (stage === 'searching') searching.classList.add('active');
+    if (stage === 'result') result.classList.add('active');
+}
+
+window.resetSeekerHero = function() {
+    setHeroStage('seeker', 'idle');
+};
+
+window.resetEmployerHero = function() {
+    setHeroStage('employer', 'idle');
+};
+
+function renderSeekerHeroResult() {
+    const panel = document.getElementById('seeker-hero-result');
+
+    if (state.seekerReservation) {
+        const r = state.seekerReservation;
+        panel.innerHTML = `
+            <div class="result-card">
+                <span class="result-badge pending"><i class="fa-solid fa-hourglass-half"></i> 예약 대기 중</span>
+                <div class="result-headline">지금은 딱 맞는 자리가 없어요</div>
+                <p class="result-sub">조건에 맞는 긴급 구인이 새로 등록되면 AI가 즉시 자동으로 매칭해드려요.</p>
+                <div class="result-job-card pending-card">
+                    <div class="detail-item"><i class="fa-solid fa-briefcase"></i> ${r.jobType === 'all' ? '전체 업종' : r.jobType}</div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${r.startTime} ~ ${r.endTime}</div>
+                    <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${r.location}</div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-hero-secondary" onclick="handleCancelReservation()"><i class="fa-solid fa-xmark"></i> 예약 취소</button>
+                    <button class="btn-hero-primary" onclick="resetSeekerHero()"><i class="fa-solid fa-rotate"></i> 조건 다시 설정</button>
+                </div>
+            </div>
+        `;
+        setHeroStage('seeker', 'result');
+        return;
+    }
+
+    const lastMatched = [...state.gigs].reverse().find(g => g.workerName === '홍길동' && g.status === 'matched');
+    if (!lastMatched) {
+        setHeroStage('seeker', 'idle');
+        return;
+    }
+
+    panel.innerHTML = `
+        <div class="result-card">
+            <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
+            <div class="result-headline">${lastMatched.title} 매칭 완료!</div>
+            <p class="result-sub">면접 없이 즉시 확정되었어요. 근무 시간에 맞춰 출근 체크만 하면 끝!</p>
+            <div class="result-job-card">
+                <div class="job-header">
+                    <div class="job-badge-area">
+                        <span class="job-title">${lastMatched.title}</span>
+                        <span class="job-employer">${lastMatched.employer}</span>
+                    </div>
+                    <div class="pay-badge"><i class="fa-solid fa-coins"></i> 시급 ${lastMatched.pay.toLocaleString()}원</div>
+                </div>
+                <div class="detail-item"><i class="fa-solid fa-clock"></i> ${lastMatched.startTime} ~ ${lastMatched.endTime}</div>
+                <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${lastMatched.location}</div>
+            </div>
+            <div class="result-actions">
+                <button class="btn-hero-primary" onclick="resetSeekerHero()"><i class="fa-solid fa-bolt"></i> 다른 조건으로 다시 매칭</button>
+            </div>
+        </div>
+    `;
+    setHeroStage('seeker', 'result');
+}
+
+function renderEmployerHeroResult(gigId) {
+    const panel = document.getElementById('employer-hero-result');
+    const gig = state.gigs.find(g => g.id === gigId);
+    if (!gig) {
+        setHeroStage('employer', 'idle');
+        return;
+    }
+
+    if (gig.status === 'matched') {
+        panel.innerHTML = `
+            <div class="result-card">
+                <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
+                <div class="result-headline">${gig.workerName}님이 매칭되었어요!</div>
+                <p class="result-sub">면접 없이 실시간으로 확정됐어요. 근무 상태를 실시간으로 확인해보세요.</p>
+                <div class="result-job-card">
+                    <div class="worker-profile-mini">
+                        <div class="worker-info-mini">
+                            <span class="worker-name-mini">${gig.workerName}</span>
+                            <span class="worker-rating"><i class="fa-solid fa-star"></i> ${gig.workerRating}</span>
+                        </div>
+                        <span class="detail-item">${gig.title}</span>
+                    </div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime}</div>
+                    <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-hero-primary employer-cta" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
+                </div>
+            </div>
+        `;
+    } else {
+        panel.innerHTML = `
+            <div class="result-card">
+                <span class="result-badge pending"><i class="fa-solid fa-hourglass-half"></i> 매칭 대기 중</span>
+                <div class="result-headline">등록 완료! 인재를 찾고 있어요</div>
+                <p class="result-sub">조건에 맞는 구직자가 실시간 매칭을 시도하면 즉시 알려드릴게요.</p>
+                <div class="result-job-card pending-card">
+                    <div class="job-header">
+                        <div class="job-badge-area">
+                            <span class="job-title">${gig.title}</span>
+                        </div>
+                        <div class="pay-badge"><i class="fa-solid fa-coins"></i> 시급 ${gig.pay.toLocaleString()}원</div>
+                    </div>
+                    <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime}</div>
+                    <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
+                </div>
+                <div class="result-actions">
+                    <button class="btn-hero-primary employer-cta" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
+                </div>
+            </div>
+        `;
+    }
+    setHeroStage('employer', 'result');
+}
+
+// --- 5. Time / Job-type Matching Helpers ---
 // Formats: "09:00", "13:00" etc.
 function isTimeWithin(seekerStart, seekerEnd, gigStart, gigEnd) {
     const [sStartH, sStartM] = seekerStart.split(':').map(Number);
@@ -183,11 +311,11 @@ function findMatchingGigs(condition) {
     });
 }
 
-// --- 5. Render Seeker View ---
+// --- 6. Render Seeker View ---
 function renderSeekerView() {
     // 1. Update Profile Dashboard
     document.getElementById('seeker-earnings').textContent = state.seekerEarnings.toLocaleString();
-    
+
     // Set form defaults
     document.getElementById('seeker-start-time').value = state.seekerSchedule.startTime;
     document.getElementById('seeker-end-time').value = state.seekerSchedule.endTime;
@@ -242,7 +370,7 @@ function renderSeekerView() {
                 actionBtn = `<button class="btn-action-green" onclick="handleEndWork('${gig.id}')"><i class="fa-solid fa-stop"></i> 퇴근 체크</button>`;
             } else if (gig.status === 'done') {
                 statusLabel = `<span class="status-tag status-done"><i class="fa-solid fa-circle-check"></i> 정산완료 (+${(gig.pay * calculateHours(gig.startTime, gig.endTime)).toLocaleString()}원)</span>`;
-                actionBtn = `<span class="detail-item" style="color: var(--accent-green-light); font-weight: 600; font-size:12px; margin-left:auto;"><i class="fa-solid fa-wallet"></i> 계좌 입금 완료</span>`;
+                actionBtn = `<span class="detail-item" style="color: #067A55; font-weight: 600; font-size:12px; margin-left:auto;"><i class="fa-solid fa-wallet"></i> 계좌 입금 완료</span>`;
             }
 
             return `
@@ -253,14 +381,14 @@ function renderSeekerView() {
                             <span class="job-employer">${gig.employer}</span>
                         </div>
                         <div class="pay-badge">
-                            시급 ${gig.pay.toLocaleString()}원
+                            <i class="fa-solid fa-coins"></i> 시급 ${gig.pay.toLocaleString()}원
                         </div>
                     </div>
                     <div class="job-details">
                         <div class="detail-item"><i class="fa-solid fa-clock"></i> ${gig.startTime} ~ ${gig.endTime} (${calculateHours(gig.startTime, gig.endTime)}시간)</div>
                         <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                     </div>
-                    <div class="job-footer" style="align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); padding-top:10px;">
+                    <div class="job-footer" style="align-items: center; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top:10px;">
                         ${statusLabel}
                         ${actionBtn}
                     </div>
@@ -271,7 +399,7 @@ function renderSeekerView() {
 
     // 3. Render Recommended Gigs (Match engine simulation)
     const recommendedList = document.getElementById('seeker-job-list');
-    
+
     // Filter conditions: status = 'waiting' and (time overlaps) and (location matches) and (job type matches)
     const filteredGigs = findMatchingGigs(state.seekerSchedule);
 
@@ -291,7 +419,7 @@ function renderSeekerView() {
                         <span class="job-employer">${gig.employer}</span>
                     </div>
                     <div class="pay-badge">
-                        시급 ${gig.pay.toLocaleString()}원
+                        <i class="fa-solid fa-coins"></i> 시급 ${gig.pay.toLocaleString()}원
                     </div>
                 </div>
                 <div class="job-details">
@@ -309,7 +437,7 @@ function renderSeekerView() {
     }
 }
 
-// --- 6. Render Employer View ---
+// --- 7. Render Employer View ---
 function renderEmployerView() {
     // Stats calculation
     const myPosted = state.gigs.length;
@@ -320,7 +448,7 @@ function renderEmployerView() {
 
     // Render Gig List
     const gigList = document.getElementById('employer-gig-list');
-    
+
     if (state.gigs.length === 0) {
         gigList.innerHTML = `
             <div class="empty-state">
@@ -345,7 +473,7 @@ function renderEmployerView() {
                             <span class="worker-name-mini">${gig.workerName}</span>
                             <span class="worker-rating"><i class="fa-solid fa-star"></i> 4.9</span>
                         </div>
-                        <span class="detail-item" style="color:var(--accent-yellow)">출근 대기</span>
+                        <span class="detail-item" style="color:var(--accent-gold-deep)">출근 대기</span>
                     </div>
                 `;
             } else if (gig.status === 'working') {
@@ -355,7 +483,7 @@ function renderEmployerView() {
                         <div class="worker-info-mini">
                             <span class="worker-name-mini">${gig.workerName}</span>
                         </div>
-                        <span class="detail-item" style="color:var(--accent-purple-light)"><i class="fa-solid fa-spinner fa-spin"></i> 열일 중</span>
+                        <span class="detail-item" style="color:#7C3AED"><i class="fa-solid fa-spinner fa-spin"></i> 열일 중</span>
                     </div>
                 `;
             } else if (gig.status === 'done') {
@@ -392,16 +520,15 @@ function renderEmployerView() {
     }
 }
 
-// --- 7. Business Action Handlers ---
+// --- 8. Business Action Handlers ---
 
-// Real-time Matching (Seeker): instantly match if possible, otherwise auto-reserve
+// AI Real-time Matching (Seeker): instantly match if possible, otherwise auto-reserve
 document.getElementById('btn-realtime-match').addEventListener('click', () => {
     const startTime = document.getElementById('seeker-start-time').value;
     const endTime = document.getElementById('seeker-end-time').value;
     const location = document.getElementById('seeker-location').value;
     const jobType = document.getElementById('seeker-job-type').value;
 
-    // Validation
     const [startH] = startTime.split(':').map(Number);
     const [endH] = endTime.split(':').map(Number);
     if (startH >= endH) {
@@ -411,29 +538,35 @@ document.getElementById('btn-realtime-match').addEventListener('click', () => {
 
     const condition = { startTime, endTime, location, jobType };
     state.seekerSchedule = condition;
+    saveState();
 
-    const candidates = findMatchingGigs(condition);
+    setHeroStage('seeker', 'searching');
 
-    if (candidates.length > 0) {
-        // Pick the best-paying match among candidates for instant matching
-        candidates.sort((a, b) => b.pay - a.pay);
-        const bestGig = candidates[0];
-        const gigIndex = state.gigs.findIndex(g => g.id === bestGig.id);
+    setTimeout(() => {
+        const candidates = findMatchingGigs(condition);
 
-        state.gigs[gigIndex].status = 'matched';
-        state.gigs[gigIndex].workerName = '홍길동';
-        state.gigs[gigIndex].workerRating = 4.9;
-        state.seekerReservation = null;
+        if (candidates.length > 0) {
+            // Pick the best-paying match among candidates for instant matching
+            candidates.sort((a, b) => b.pay - a.pay);
+            const bestGig = candidates[0];
+            const gigIndex = state.gigs.findIndex(g => g.id === bestGig.id);
 
-        saveState();
-        showToast(`⚡ 실시간 매칭 성공! '${bestGig.title}' (${bestGig.employer}) 근무가 면접 없이 즉시 확정되었습니다.`, 'success');
-    } else {
-        state.seekerReservation = { ...condition, createdAt: Date.now() };
-        saveState();
-        showToast('지금 당장 매칭 가능한 일자리가 없어 예약을 걸어두었습니다. 조건에 맞는 알바가 등록되면 자동으로 매칭해드릴게요!', 'info');
-    }
+            state.gigs[gigIndex].status = 'matched';
+            state.gigs[gigIndex].workerName = '홍길동';
+            state.gigs[gigIndex].workerRating = 4.9;
+            state.seekerReservation = null;
 
-    renderSeekerView();
+            saveState();
+            showToast(`⚡ 실시간 매칭 성공! '${bestGig.title}' (${bestGig.employer}) 근무가 면접 없이 즉시 확정되었습니다.`, 'success');
+        } else {
+            state.seekerReservation = { ...condition, createdAt: Date.now() };
+            saveState();
+            showToast('지금 당장 매칭 가능한 일자리가 없어 예약을 걸어두었습니다. 조건에 맞는 알바가 등록되면 자동으로 매칭해드릴게요!', 'info');
+        }
+
+        renderSeekerHeroResult();
+        renderSeekerView();
+    }, 1400);
 });
 
 // Cancel Pending Reservation (Seeker)
@@ -441,17 +574,18 @@ window.handleCancelReservation = function() {
     state.seekerReservation = null;
     saveState();
     showToast('예약이 취소되었습니다.', 'info');
+    setHeroStage('seeker', 'idle');
     renderSeekerView();
 };
 
-// Quick Apply (Seeker)
+// Quick Apply (Seeker, manual pick from the open list)
 window.handleQuickApply = function(gigId) {
     const gigIndex = state.gigs.findIndex(g => g.id === gigId);
     if (gigIndex !== -1) {
         state.gigs[gigIndex].status = 'matched';
         state.gigs[gigIndex].workerName = '홍길동';
         state.gigs[gigIndex].workerRating = 4.9;
-        
+
         saveState();
         showToast('축하합니다! 틈새 알바가 즉시 매칭되었습니다. 면접 없이 확정되었습니다.', 'success');
         renderSeekerView();
@@ -487,16 +621,16 @@ window.handleApprovePayment = function(gigId) {
         const gig = state.gigs[gigIndex];
         const hours = calculateHours(gig.startTime, gig.endTime);
         const earned = gig.pay * hours;
-        
+
         // Add to seeker's earnings (since we simulate the same user on Seeker profile)
         state.seekerEarnings += earned;
-        
+
         // Remove from list or archive (for MVP, we delete from gigs or mark fully resolved)
         state.gigs.splice(gigIndex, 1);
-        
+
         saveState();
         showToast(`근무 수당 ${earned.toLocaleString()}원 송금이 완료되었습니다.`, 'success');
-        
+
         if (document.getElementById('btn-employer').classList.contains('active')) {
             renderEmployerView();
         } else {
@@ -505,10 +639,10 @@ window.handleApprovePayment = function(gigId) {
     }
 };
 
-// Create a Gig (Employer)
+// Create a Gig (Employer) -> triggers AI matching search on the employer hero
 document.getElementById('gig-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const title = document.getElementById('gig-title').value;
     const pay = parseInt(document.getElementById('gig-hourly-pay').value);
     const startTime = document.getElementById('gig-start-time').value;
@@ -541,12 +675,16 @@ document.getElementById('gig-form').addEventListener('submit', (e) => {
     state.gigs.push(newGig);
     saveState();
     showToast('긴급 구인 공고가 등록되었습니다. 실시간으로 매칭이 시작됩니다.', 'employer');
-
-    // Auto-fulfill the seeker's reservation if this gig fits, otherwise just notify
-    handleNewGigPosted(newGig);
-
-    renderEmployerView();
     document.getElementById('gig-form').reset();
+
+    setHeroStage('employer', 'searching');
+
+    setTimeout(() => {
+        // Auto-fulfill the seeker's reservation if this gig fits, otherwise it stays waiting
+        handleNewGigPosted(newGig);
+        renderEmployerHeroResult(newGig.id);
+        renderEmployerView();
+    }, 1400);
 });
 
 // Whenever a new gig is posted, check if it fulfills the seeker's pending reservation,
@@ -566,9 +704,7 @@ function handleNewGigPosted(gig) {
             state.seekerReservation = null;
             saveState();
 
-            setTimeout(() => {
-                showToast(`⚡ 예약 자동 매칭 완료! 예약해두신 조건과 일치하는 '${gig.title}' 알바가 즉시 매칭되었습니다.`, 'success');
-            }, 800);
+            showToast(`⚡ 예약 자동 매칭 완료! 예약해두신 조건과 일치하는 '${gig.title}' 알바가 즉시 매칭되었습니다.`, 'success');
             return true;
         }
     }
@@ -584,14 +720,12 @@ function handleNewGigPosted(gig) {
     const jobMatches = isJobTypeMatch(state.seekerSchedule.jobType, gig.title);
 
     if (timeMatches && locationMatches && jobMatches) {
-        setTimeout(() => {
-            showToast(`⚡ 알림: 내 조건과 딱 맞는 '${gig.title}'이 새로 등록되었습니다!`, 'info');
-        }, 800);
+        showToast(`⚡ 알림: 내 조건과 딱 맞는 '${gig.title}'이 새로 등록되었습니다!`, 'info');
     }
     return false;
 }
 
-// --- 8. Simulator Utilities ---
+// --- 9. Simulator Utilities ---
 function initSimulator() {
     const toggleBtn = document.getElementById('btn-toggle-sim');
     const simBody = document.getElementById('sim-body');
@@ -606,8 +740,10 @@ function initSimulator() {
         if (confirm('모든 데이터를 초기화하시겠습니까?')) {
             resetToDefault();
             showToast('데이터가 초기화되었습니다.', 'info');
-            
-            // Re-render current active view
+
+            setHeroStage('seeker', 'idle');
+            setHeroStage('employer', 'idle');
+
             if (document.getElementById('btn-seeker').classList.contains('active')) {
                 renderSeekerView();
             } else {
@@ -620,7 +756,7 @@ function initSimulator() {
     document.getElementById('btn-sim-add-jobs').addEventListener('click', () => {
         const mockGigs = [
             {
-                id: 'gig-mock-1',
+                id: 'gig-mock-' + Date.now() + '-1',
                 title: '레스토랑 식기세척',
                 employer: '도산 파스타키친',
                 pay: 13000,
@@ -633,7 +769,7 @@ function initSimulator() {
                 workerRating: null
             },
             {
-                id: 'gig-mock-2',
+                id: 'gig-mock-' + Date.now() + '-2',
                 title: '행사 주차 안내',
                 employer: '코엑스 모빌리티',
                 pay: 14000,
@@ -646,7 +782,7 @@ function initSimulator() {
                 workerRating: null
             },
             {
-                id: 'gig-mock-3',
+                id: 'gig-mock-' + Date.now() + '-3',
                 title: '바리스타 보조',
                 employer: '블루보틀 성수',
                 pay: 12500,
@@ -683,12 +819,20 @@ function calculateHours(startTime, endTime) {
 }
 
 
-// --- 9. App Entrypoint ---
+// --- 10. App Entrypoint ---
 window.addEventListener('DOMContentLoaded', () => {
     loadState();
     initViewSwitcher();
     initSimulator();
-    
-    // Default render
+
     renderSeekerView();
+    renderEmployerView();
+
+    // Land directly on the AI matching screen; restore a pending reservation if one exists
+    if (state.seekerReservation) {
+        renderSeekerHeroResult();
+    } else {
+        setHeroStage('seeker', 'idle');
+    }
+    setHeroStage('employer', 'idle');
 });
