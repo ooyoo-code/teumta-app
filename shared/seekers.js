@@ -20,19 +20,55 @@ function koreanDayFromDateStr(dateStr) {
     return JS_DAY_TO_KOREAN[d.getDay()];
 }
 
+// The real seeker's own schedule is edited slot-by-slot (see the day-strip +
+// slot-grid UI in seeker/app.js), so it's stored as a set of selected hour
+// blocks rather than a single start/end range.
 function emptyWeeklyAvailability() {
     const availability = {};
     WEEK_DAYS.forEach(day => {
-        availability[day] = { enabled: false, fullDay: false, start: '09:00', end: '18:00' };
+        availability[day] = { enabled: false, fullDay: false, slots: [] };
     });
     return availability;
 }
+
+// Hourly slot labels shown in the availability editor, split into 오전/오후.
+const SLOT_HOURS_AM = ['00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00'];
+const SLOT_HOURS_PM = ['12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00'];
+const SLOT_HOURS_ALL = [...SLOT_HOURS_AM, ...SLOT_HOURS_PM];
 
 function isSeekerAvailable(availability, dayName, gigStart, gigEnd) {
     const day = availability && availability[dayName];
     if (!day || !day.enabled) return false;
     if (day.fullDay) return true;
+
+    if (Array.isArray(day.slots)) {
+        const slotSet = new Set(day.slots);
+        let cur = timeToMinutes(gigStart);
+        const end = timeToMinutes(gigEnd);
+        while (cur < end) {
+            if (!slotSet.has(minutesToTime(cur))) return false;
+            cur += 60;
+        }
+        return true;
+    }
+
+    // Legacy range shape (used by the mock candidate pool).
     return isTimeWithin(day.start, day.end, gigStart, gigEnd);
+}
+
+// Dates (Mon-Sun) for the week containing `baseDate`, used by the day-strip UI.
+function getWeekDates(baseDate = new Date()) {
+    const dow = baseDate.getDay(); // 0=Sun..6=Sat
+    const diffToMonday = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(baseDate);
+    monday.setDate(baseDate.getDate() + diffToMonday);
+    const dates = [];
+    for (let i = 0; i < 7; i++) {
+        const d = new Date(monday);
+        d.setDate(monday.getDate() + i);
+        dates.push(d);
+    }
+    return dates;
 }
 
 // Mock candidate pool: gives the employer's random auto-match something real to draw from.

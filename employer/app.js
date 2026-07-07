@@ -222,17 +222,12 @@ function render(state) {
 }
 
 // --- Actions ---
-// Date field defaults to today and can't go into the past; the day-of-week badge
-// is derived from it automatically (no separate day picker needed).
+// Date field defaults to today and can't go into the past. The day-of-week is
+// derived from it internally for availability matching, with no separate UI for it.
 function todayDateStr() {
     const d = new Date();
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function updateGigDayLabel() {
-    const dateVal = document.getElementById('gig-date').value;
-    document.getElementById('gig-day-label').textContent = dateVal ? koreanDayFromDateStr(dateVal) : '-';
 }
 
 function resetGigDateField() {
@@ -240,10 +235,7 @@ function resetGigDateField() {
     const todayStr = todayDateStr();
     dateInput.min = todayStr;
     dateInput.value = todayStr;
-    updateGigDayLabel();
 }
-
-document.getElementById('gig-date').addEventListener('change', updateGigDayLabel);
 
 document.getElementById('gig-form').addEventListener('submit', (e) => {
     e.preventDefault();

@@ -99,59 +99,152 @@ function checkForNewMatches(state) {
     notifiedMatchIds = currentIds;
 }
 
-// --- Weekly Availability Grid (rendered once; not re-rendered on unrelated state changes) ---
-const AVAIL_TIME_OPTIONS = ['00:00', '06:00', '07:00', '08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '24:00'];
+// --- Availability Editor: day-strip + hourly slot-grid ---
+// Used for both the persistent "main" card and the one-time "onboarding" step.
+// Each instance keeps its own working-copy draft in editorState, independent
+// of the render(state) loop (so mid-edit taps never get overwritten).
+const editorState = {};
 
-function timeOptionsHtml(selected) {
-    return AVAIL_TIME_OPTIONS.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${t}</option>`).join('');
+function initAvailabilityEditor(prefix, availability) {
+    editorState[prefix] = {
+        draft: JSON.parse(JSON.stringify(availability)),
+        selectedDay: todayKoreanDay()
+    };
+    renderDayStrip(prefix);
+    renderSlotGrid(prefix);
 }
 
-function renderAvailabilityGrid(availability) {
-    const container = document.getElementById('availability-grid');
-    container.innerHTML = WEEK_DAYS.map(day => {
-        const d = availability[day] || { enabled: false, fullDay: false, start: '09:00', end: '18:00' };
+function renderDayStrip(prefix) {
+    const editor = editorState[prefix];
+    const container = document.getElementById(`${prefix}-day-strip`);
+    const dates = getWeekDates();
+
+    container.innerHTML = WEEK_DAYS.map((day, i) => {
+        const hasSlots = editor.draft[day] && editor.draft[day].enabled;
+        const isSelected = editor.selectedDay === day;
         return `
-            <div class="avail-row" data-day="${day}">
-                <label class="avail-day-toggle">
-                    <input type="checkbox" class="avail-enabled" ${d.enabled ? 'checked' : ''}>
-                    <span>${day}</span>
-                </label>
-                <div class="avail-time-range">
-                    <select class="avail-start" ${d.fullDay ? 'disabled' : ''}>${timeOptionsHtml(d.start)}</select>
-                    <span class="time-separator">~</span>
-                    <select class="avail-end" ${d.fullDay ? 'disabled' : ''}>${timeOptionsHtml(d.end)}</select>
-                </div>
-                <label class="avail-fulltime-toggle">
-                    <input type="checkbox" class="avail-fulltime" ${d.fullDay ? 'checked' : ''}> 풀타임
-                </label>
-            </div>
+            <button type="button" class="day-tile ${isSelected ? 'selected' : ''} ${hasSlots ? 'has-slots' : ''}" data-day="${day}">
+                <span class="day-tile-name">${day}</span>
+                <span class="day-tile-date">${dates[i].getDate()}</span>
+            </button>
         `;
     }).join('');
 
-    container.querySelectorAll('.avail-row').forEach(row => {
-        const fulltimeCb = row.querySelector('.avail-fulltime');
-        const startSel = row.querySelector('.avail-start');
-        const endSel = row.querySelector('.avail-end');
-        fulltimeCb.addEventListener('change', () => {
-            startSel.disabled = fulltimeCb.checked;
-            endSel.disabled = fulltimeCb.checked;
+    container.querySelectorAll('.day-tile').forEach(btn => {
+        btn.addEventListener('click', () => {
+            editor.selectedDay = btn.dataset.day;
+            renderDayStrip(prefix);
+            renderSlotGrid(prefix);
+        });
+    });
+}
+
+function renderSlotGrid(prefix) {
+    const editor = editorState[prefix];
+    const container = document.getElementById(`${prefix}-slot-grid`);
+    const day = editor.draft[editor.selectedDay];
+    const slotSet = new Set(day.slots || []);
+
+    const chip = (t) => `<button type="button" class="slot-chip ${(slotSet.has(t) || day.fullDay) ? 'selected' : ''}" data-time="${t}">${t}</button>`;
+
+    container.innerHTML = `
+        <div class="slot-grid-header">
+            <span class="slot-grid-daylabel">${editor.selectedDay}요일</span>
+            <label class="fullday-toggle">
+                <input type="checkbox" class="slot-fullday" ${day.fullDay ? 'checked' : ''}> 하루 종일 가능
+            </label>
+        </div>
+        <div class="slot-section-label">오전</div>
+        <div class="slot-row">${SLOT_HOURS_AM.map(chip).join('')}</div>
+        <div class="slot-section-label">오후</div>
+        <div class="slot-row">${SLOT_HOURS_PM.map(chip).join('')}</div>
+    `;
+
+    container.querySelector('.slot-fullday').addEventListener('change', (e) => {
+        day.fullDay = e.target.checked;
+        day.enabled = day.fullDay || day.slots.length > 0;
+        renderSlotGrid(prefix);
+        renderDayStrip(prefix);
+    });
+
+    container.querySelectorAll('.slot-chip').forEach(chipEl => {
+        chipEl.addEventListener('click', () => {
+            if (day.fullDay) return;
+            const t = chipEl.dataset.time;
+            const idx = day.slots.indexOf(t);
+            if (idx === -1) day.slots.push(t); else day.slots.splice(idx, 1);
+            day.enabled = day.slots.length > 0;
+            renderSlotGrid(prefix);
+            renderDayStrip(prefix);
         });
     });
 }
 
 document.getElementById('btn-save-availability').addEventListener('click', () => {
-    const availability = {};
-    document.querySelectorAll('#availability-grid .avail-row').forEach(row => {
-        const day = row.dataset.day;
-        availability[day] = {
-            enabled: row.querySelector('.avail-enabled').checked,
-            fullDay: row.querySelector('.avail-fulltime').checked,
-            start: row.querySelector('.avail-start').value,
-            end: row.querySelector('.avail-end').value
-        };
-    });
-    db.saveSeekerAvailability(availability);
+    db.saveSeekerAvailability(editorState.main.draft);
     showToast('정기 근무 가능 시간이 저장되었습니다. 조건에 맞는 긴급 구인이 등록되면 자동 매칭 후보가 돼요.', 'success');
+});
+
+// --- First-launch Onboarding: splash (mascot + alternating scenes) -> intro cards -> availability setup ---
+const ONBOARDING_KEY = 'teumta_onboarding_done';
+
+function startSplashSequence() {
+    const splash = document.getElementById('splash-screen');
+    const scenes = splash.querySelectorAll('.splash-bg');
+    let sceneIdx = 0;
+    const sceneTimer = setInterval(() => {
+        scenes[sceneIdx].classList.remove('active');
+        sceneIdx = (sceneIdx + 1) % scenes.length;
+        scenes[sceneIdx].classList.add('active');
+    }, 2200);
+
+    setTimeout(() => {
+        clearInterval(sceneTimer);
+        splash.classList.remove('active');
+        document.getElementById('onboarding-cards').classList.add('active');
+    }, 5000);
+}
+
+function initOnboardingCards() {
+    const track = document.getElementById('onboarding-track');
+    const dots = document.querySelectorAll('#onboarding-dots .dot');
+    const nextBtn = document.getElementById('btn-onboarding-next');
+    const cardCount = track.children.length;
+    let index = 0;
+
+    function updateControls() {
+        dots.forEach((d, di) => d.classList.toggle('active', di === index));
+        nextBtn.textContent = index === cardCount - 1 ? '시작하기' : '다음';
+    }
+
+    function goTo(i) {
+        index = Math.max(0, Math.min(cardCount - 1, i));
+        track.scrollTo({ left: track.clientWidth * index, behavior: 'smooth' });
+        updateControls();
+    }
+
+    track.addEventListener('scroll', () => {
+        const i = Math.round(track.scrollLeft / track.clientWidth);
+        if (i !== index) { index = i; updateControls(); }
+    });
+
+    nextBtn.addEventListener('click', () => {
+        if (index < cardCount - 1) {
+            goTo(index + 1);
+            return;
+        }
+        document.getElementById('onboarding-cards').classList.remove('active');
+        document.getElementById('onboarding-availability-step').classList.add('active');
+        initAvailabilityEditor('onboarding', db.getState().seekerProfile.availability);
+    });
+}
+
+document.getElementById('btn-onboarding-finish').addEventListener('click', () => {
+    db.saveSeekerAvailability(editorState.onboarding.draft);
+    localStorage.setItem(ONBOARDING_KEY, '1');
+    document.getElementById('onboarding-overlay').remove();
+    initAvailabilityEditor('main', db.getState().seekerProfile.availability);
+    showToast('근무 가능 시간이 등록되었습니다. 틈타를 시작해보세요!', 'success');
 });
 
 // --- Render ---
@@ -351,12 +444,10 @@ function initSimulator() {
     });
 
     document.getElementById('btn-sim-reset').addEventListener('click', () => {
-        if (confirm('모든 데이터를 초기화하시겠습니까? (구직자/사장님 앱 양쪽 모두 초기화됩니다)')) {
+        if (confirm('모든 데이터를 초기화하시겠습니까? (구직자/사장님 앱 양쪽 모두 초기화되고, 첫 실행 온보딩도 다시 보여집니다)')) {
             db.resetToDefault();
-            notifiedMatchIds = null;
-            showToast('데이터가 초기화되었습니다.', 'info');
-            setHeroStage('idle');
-            renderAvailabilityGrid(db.getState().seekerProfile.availability);
+            localStorage.removeItem(ONBOARDING_KEY);
+            location.reload();
         }
     });
 
@@ -378,6 +469,14 @@ function calculateHours(startTime, endTime) {
 // --- App Entrypoint ---
 window.addEventListener('DOMContentLoaded', () => {
     initSimulator();
-    renderAvailabilityGrid(db.getState().seekerProfile.availability);
+    initAvailabilityEditor('main', db.getState().seekerProfile.availability);
+
+    if (localStorage.getItem(ONBOARDING_KEY)) {
+        document.getElementById('onboarding-overlay').remove();
+    } else {
+        startSplashSequence();
+        initOnboardingCards();
+    }
+
     db.subscribe(render);
 });
