@@ -1370,11 +1370,11 @@ textarea {
     display: flex;
 }
 
-.splash-video {
+.splash-canvas {
     width: 65%;
     max-width: 260px;
+    aspect-ratio: 1 / 1;
     height: auto;
-    border-radius: 20px;
 }
 
 /* --- Onboarding intro cards (swipeable, scroll-snap) --- */

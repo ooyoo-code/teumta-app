@@ -185,12 +185,25 @@ document.getElementById('btn-save-availability').addEventListener('click', () =>
     showToast('정기 근무 가능 시간이 저장되었습니다. 조건에 맞는 긴급 구인이 등록되면 자동 매칭 후보가 돼요.', 'success');
 });
 
-// --- First-launch Onboarding: video splash -> intro cards -> availability setup ---
+// --- First-launch Onboarding: transparent character splash -> intro cards -> availability setup ---
+// The clip is pre-rendered into a transparent PNG frame sequence (white/near-white
+// background chroma-keyed out) and played on a <canvas> — far more reliable across
+// browsers than a video or animated WebP with an alpha channel.
 const ONBOARDING_KEY = 'teumta_onboarding_done';
+const SPLASH_FRAME_COUNT = 98;
+const SPLASH_FPS = 15;
 
 function startSplashSequence() {
     const splash = document.getElementById('splash-screen');
-    const video = document.getElementById('splash-video');
+    const canvas = document.getElementById('splash-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const frames = [];
+    for (let i = 0; i < SPLASH_FRAME_COUNT; i++) {
+        const img = new Image();
+        img.src = `assets/frames/f${String(i).padStart(3, '0')}.png`;
+        frames.push(img);
+    }
 
     let advanced = false;
     function advance() {
@@ -200,14 +213,29 @@ function startSplashSequence() {
         document.getElementById('onboarding-cards').classList.add('active');
     }
 
-    // Move on as soon as the clip finishes; fall back to a timer in case
-    // autoplay is blocked or the video fails to load.
-    video.addEventListener('ended', advance);
-    video.addEventListener('error', advance);
-    setTimeout(advance, 8000);
+    let frameIndex = 0;
+    let lastDrawTime = 0;
+    const frameDuration = 1000 / SPLASH_FPS;
 
-    const playPromise = video.play();
-    if (playPromise) playPromise.catch(() => {}); // autoplay can be blocked; the fallback timer still advances
+    function draw(timestamp) {
+        if (advanced) return;
+        if (timestamp - lastDrawTime >= frameDuration) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(frames[frameIndex], 0, 0, canvas.width, canvas.height);
+            frameIndex++;
+            lastDrawTime = timestamp;
+            if (frameIndex >= SPLASH_FRAME_COUNT) {
+                advance();
+                return;
+            }
+        }
+        requestAnimationFrame(draw);
+    }
+
+    function start() { requestAnimationFrame(draw); }
+    if (frames[0].complete) start(); else frames[0].addEventListener('load', start, { once: true });
+
+    setTimeout(advance, 8000); // fallback safety net
 }
 
 function initOnboardingCards() {
