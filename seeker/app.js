@@ -185,24 +185,29 @@ document.getElementById('btn-save-availability').addEventListener('click', () =>
     showToast('정기 근무 가능 시간이 저장되었습니다. 조건에 맞는 긴급 구인이 등록되면 자동 매칭 후보가 돼요.', 'success');
 });
 
-// --- First-launch Onboarding: splash (mascot + alternating scenes) -> intro cards -> availability setup ---
+// --- First-launch Onboarding: video splash -> intro cards -> availability setup ---
 const ONBOARDING_KEY = 'teumta_onboarding_done';
 
 function startSplashSequence() {
     const splash = document.getElementById('splash-screen');
-    const scenes = splash.querySelectorAll('.splash-bg');
-    let sceneIdx = 0;
-    const sceneTimer = setInterval(() => {
-        scenes[sceneIdx].classList.remove('active');
-        sceneIdx = (sceneIdx + 1) % scenes.length;
-        scenes[sceneIdx].classList.add('active');
-    }, 2200);
+    const video = document.getElementById('splash-video');
 
-    setTimeout(() => {
-        clearInterval(sceneTimer);
+    let advanced = false;
+    function advance() {
+        if (advanced) return;
+        advanced = true;
         splash.classList.remove('active');
         document.getElementById('onboarding-cards').classList.add('active');
-    }, 5000);
+    }
+
+    // Move on as soon as the clip finishes; fall back to a timer in case
+    // autoplay is blocked or the video fails to load.
+    video.addEventListener('ended', advance);
+    video.addEventListener('error', advance);
+    setTimeout(advance, 8000);
+
+    const playPromise = video.play();
+    if (playPromise) playPromise.catch(() => {}); // autoplay can be blocked; the fallback timer still advances
 }
 
 function initOnboardingCards() {
