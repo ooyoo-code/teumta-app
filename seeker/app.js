@@ -185,58 +185,8 @@ document.getElementById('btn-save-availability').addEventListener('click', () =>
     showToast('정기 근무 가능 시간이 저장되었습니다. 조건에 맞는 긴급 구인이 등록되면 자동 매칭 후보가 돼요.', 'success');
 });
 
-// --- First-launch Onboarding: transparent character splash -> intro cards -> availability setup ---
-// The clip is pre-rendered into a transparent PNG frame sequence (white/near-white
-// background chroma-keyed out) and played on a <canvas> — far more reliable across
-// browsers than a video or animated WebP with an alpha channel.
+// --- First-launch Onboarding: intro cards -> availability setup ---
 const ONBOARDING_KEY = 'teumta_onboarding_done';
-const SPLASH_FRAME_COUNT = 98;
-const SPLASH_FPS = 15;
-
-function startSplashSequence() {
-    const splash = document.getElementById('splash-screen');
-    const canvas = document.getElementById('splash-canvas');
-    const ctx = canvas.getContext('2d');
-
-    const frames = [];
-    for (let i = 0; i < SPLASH_FRAME_COUNT; i++) {
-        const img = new Image();
-        img.src = `assets/frames/f${String(i).padStart(3, '0')}.png`;
-        frames.push(img);
-    }
-
-    let advanced = false;
-    function advance() {
-        if (advanced) return;
-        advanced = true;
-        splash.classList.remove('active');
-        document.getElementById('onboarding-cards').classList.add('active');
-    }
-
-    let frameIndex = 0;
-    let lastDrawTime = 0;
-    const frameDuration = 1000 / SPLASH_FPS;
-
-    function draw(timestamp) {
-        if (advanced) return;
-        if (timestamp - lastDrawTime >= frameDuration) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(frames[frameIndex], 0, 0, canvas.width, canvas.height);
-            frameIndex++;
-            lastDrawTime = timestamp;
-            if (frameIndex >= SPLASH_FRAME_COUNT) {
-                advance();
-                return;
-            }
-        }
-        requestAnimationFrame(draw);
-    }
-
-    function start() { requestAnimationFrame(draw); }
-    if (frames[0].complete) start(); else frames[0].addEventListener('load', start, { once: true });
-
-    setTimeout(advance, 8000); // fallback safety net
-}
 
 function initOnboardingCards() {
     const track = document.getElementById('onboarding-track');
@@ -507,7 +457,6 @@ window.addEventListener('DOMContentLoaded', () => {
     if (localStorage.getItem(ONBOARDING_KEY)) {
         document.getElementById('onboarding-overlay').remove();
     } else {
-        startSplashSequence();
         initOnboardingCards();
     }
 

@@ -1356,27 +1356,6 @@ textarea {
     background: var(--bg-main);
 }
 
-/* --- Splash: white background with the intro video --- */
-.splash-screen {
-    position: absolute;
-    inset: 0;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    background: #FFFFFF;
-}
-
-.splash-screen.active {
-    display: flex;
-}
-
-.splash-canvas {
-    width: 65%;
-    max-width: 260px;
-    aspect-ratio: 1 / 1;
-    height: auto;
-}
-
 /* --- Onboarding intro cards (swipeable, scroll-snap) --- */
 .onboarding-cards {
     position: absolute;
