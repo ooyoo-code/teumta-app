@@ -80,8 +80,10 @@ function runAutoMatch(gig) {
 
 function renderHeroResult(gigId) {
     const panel = document.getElementById('employer-hero-result');
+    panel.dataset.gigId = gigId; // tracked so render() can keep this panel live after any state change
     const gig = db.getState().gigs.find(g => g.id === gigId);
     if (!gig) {
+        delete panel.dataset.gigId;
         setHeroStage('idle');
         return;
     }
@@ -89,10 +91,12 @@ function renderHeroResult(gigId) {
     if (gig.status === 'matched') {
         const headline = gig.employerConfirmed ? `${gig.workerName}님으로 확정되었어요!` : `${gig.workerName}님이 매칭되었어요!`;
         const sub = gig.employerConfirmed
-            ? '구인이 확정되었습니다. 취소하시면 위약금이 발생해요.'
+            ? '구인이 확정되었습니다. 확정 이후 취소하시면 위약금이 발생합니다.'
             : '등록된 근무 가능 시간이 맞는 구직자 중 랜덤으로 배정되었어요.';
         const actions = gig.employerConfirmed
-            ? ''
+            ? `<div class="result-actions">
+                <button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')"><i class="fa-solid fa-triangle-exclamation"></i> 위약금 내고 취소</button>
+            </div>`
             : `<div class="result-actions">
                 <button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">구인 취소</button>
                 <button class="btn-hero-primary employer-cta" onclick="handleEmployerConfirm('${gig.id}')">구인 확정</button>
@@ -146,6 +150,12 @@ function renderHeroResult(gigId) {
 
 // --- Render ---
 function render(state) {
+    // Keep the hero result panel live: confirm/cancel can be triggered from either
+    // the hero itself or the persistent list card below, so any state change needs
+    // to refresh whichever gig the hero is currently displaying.
+    const heroGigId = document.getElementById('employer-hero-result').dataset.gigId;
+    if (heroGigId) renderHeroResult(heroGigId);
+
     const myPosted = state.gigs.length;
     const myMatched = state.gigs.filter(g => g.status !== 'waiting').length;
 
@@ -186,7 +196,7 @@ function render(state) {
                 ${gig.workerBio ? `<p class="job-desc">${gig.workerBio}</p>` : ''}
             `;
             if (gig.employerConfirmed) {
-                cancelBtn = `<button class="btn-cancel-teumta" onclick="handleEmployerCancel('${gig.id}')">취소 (위약금 발생)</button>`;
+                cancelBtn = `<button class="btn-cancel-teumta" onclick="handleEmployerCancel('${gig.id}')"><i class="fa-solid fa-triangle-exclamation"></i> 위약금 내고 취소</button>`;
             } else {
                 cancelBtn = `
                     <div class="result-actions">

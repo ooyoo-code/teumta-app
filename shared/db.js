@@ -12,65 +12,89 @@
 const STORAGE_KEY = 'teumta_mvp_data';
 const ME_NAME = '홍길동';
 
-const SAMPLE_GIGS = [
-    {
-        id: 'gig-1',
-        title: '카페 홀 서빙',
-        employer: '역삼 스타카페',
-        pay: 12000,
-        startTime: '11:00',
-        endTime: '14:00',
-        location: '강남구 역삼동',
-        description: '점심 피크 타임 음료 서빙 및 테이블 정리 간단한 보조 업무입니다. 활기차고 밝은 분 환영!',
-        status: 'waiting',
-        workerName: null,
-        workerRating: null,
-        workerBio: null,
-        workerIsMe: false,
-        seekerConfirmed: false,
-        employerConfirmed: false
-    },
-    {
-        id: 'gig-2',
-        title: '레스토랑 식기세척',
-        employer: '도산 파스타키친',
-        pay: 13000,
-        startTime: '12:00',
-        endTime: '15:00',
-        location: '서초구 서초동',
-        description: '바쁜 점심 시간대 식기 세척 및 주방 보조 업무입니다. 고무장갑 제공, 간단한 식사 제공합니다.',
-        status: 'waiting',
-        workerName: null,
-        workerRating: null,
-        workerBio: null,
-        workerIsMe: false,
-        seekerConfirmed: false,
-        employerConfirmed: false
-    },
-    {
-        id: 'gig-3',
-        title: '편의점 물류 분류',
-        employer: 'GS25 역삼벤처점',
-        pay: 11000,
-        startTime: '13:00',
-        endTime: '15:00',
-        location: '강남구 역삼동',
-        description: '오후 물류 입고 차량 하차 보조 및 음료 냉장고 진열 업무입니다. 단순 반복 작업입니다.',
-        status: 'waiting',
-        workerName: null,
-        workerRating: null,
-        workerBio: null,
-        workerIsMe: false
-    }
-];
+// Sample gig times are generated relative to "now" (not fixed clock times) so a
+// freshly-reset demo always has shifts that start a few hours out — otherwise
+// whatever's typed here would drift into the past as the day goes on, and every
+// cancel attempt would immediately hit the 1hr-before-shift cutoff.
+function hoursFromNowStr(hours) {
+    const d = new Date(Date.now() + hours * 60 * 60 * 1000);
+    return `${String(d.getHours()).padStart(2, '0')}:00`;
+}
+
+function buildSampleGigs() {
+    const today = todayDateStr();
+    const dow = todayKoreanDay();
+    return [
+        {
+            id: 'gig-1',
+            title: '카페 홀 서빙',
+            employer: '역삼 스타카페',
+            pay: 12000,
+            date: today,
+            dayOfWeek: dow,
+            startTime: hoursFromNowStr(2),
+            endTime: hoursFromNowStr(5),
+            location: '강남구 역삼동',
+            description: '점심 피크 타임 음료 서빙 및 테이블 정리 간단한 보조 업무입니다. 활기차고 밝은 분 환영!',
+            status: 'waiting',
+            workerName: null,
+            workerRating: null,
+            workerBio: null,
+            workerIsMe: false,
+            seekerConfirmed: false,
+            employerConfirmed: false
+        },
+        {
+            id: 'gig-2',
+            title: '레스토랑 식기세척',
+            employer: '도산 파스타키친',
+            pay: 13000,
+            date: today,
+            dayOfWeek: dow,
+            startTime: hoursFromNowStr(3),
+            endTime: hoursFromNowStr(6),
+            location: '서초구 서초동',
+            description: '바쁜 점심 시간대 식기 세척 및 주방 보조 업무입니다. 고무장갑 제공, 간단한 식사 제공합니다.',
+            status: 'waiting',
+            workerName: null,
+            workerRating: null,
+            workerBio: null,
+            workerIsMe: false,
+            seekerConfirmed: false,
+            employerConfirmed: false
+        },
+        {
+            id: 'gig-3',
+            title: '편의점 물류 분류',
+            employer: 'GS25 역삼벤처점',
+            pay: 11000,
+            date: today,
+            dayOfWeek: dow,
+            startTime: hoursFromNowStr(4),
+            endTime: hoursFromNowStr(6),
+            location: '강남구 역삼동',
+            description: '오후 물류 입고 차량 하차 보조 및 음료 냉장고 진열 업무입니다. 단순 반복 작업입니다.',
+            status: 'waiting',
+            workerName: null,
+            workerRating: null,
+            workerBio: null,
+            workerIsMe: false,
+            seekerConfirmed: false,
+            employerConfirmed: false
+        }
+    ];
+}
 
 function defaultState() {
     return {
-        gigs: [...SAMPLE_GIGS],
-        // One-time "right now" condition used by the seeker's on-demand instant-match button
+        gigs: buildSampleGigs(),
+        // One-time "right now" condition used by the seeker's on-demand instant-match button.
+        // Fixed to the widest start/end options in the seeker-start-time / seeker-end-time
+        // <select> lists (rather than a "now"-relative time) so the value always matches a
+        // real <option> — but still wide enough to cover all of buildSampleGigs()'s windows.
         seekerSchedule: {
-            startTime: '11:00',
-            endTime: '15:00',
+            startTime: '09:00',
+            endTime: '22:00',
             location: '강남구 역삼동',
             jobType: 'all'
         },
