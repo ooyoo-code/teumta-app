@@ -26,7 +26,9 @@ const SAMPLE_GIGS = [
         workerName: null,
         workerRating: null,
         workerBio: null,
-        workerIsMe: false
+        workerIsMe: false,
+        seekerConfirmed: false,
+        employerConfirmed: false
     },
     {
         id: 'gig-2',
@@ -41,7 +43,9 @@ const SAMPLE_GIGS = [
         workerName: null,
         workerRating: null,
         workerBio: null,
-        workerIsMe: false
+        workerIsMe: false,
+        seekerConfirmed: false,
+        employerConfirmed: false
     },
     {
         id: 'gig-3',
@@ -76,9 +80,13 @@ function defaultState() {
             bio: '성실하고 책임감 있게 일합니다. 잘 부탁드려요!',
             trustScore: 36.5,
             location: '강남구 역삼동',
-            availability: emptyWeeklyAvailability()
+            availability: emptyWeeklyAvailability(),
+            cancelCount: 0,
+            cancelDate: null
         },
-        seekerEarnings: 0
+        seekerEarnings: 0,
+        employerCancelCount: 0,
+        employerCancelDate: null
     };
 }
 
@@ -160,6 +168,8 @@ const db = {
             workerRating: null,
             workerBio: null,
             workerIsMe: false,
+            seekerConfirmed: false,
+            employerConfirmed: false,
             ...gigData
         };
         state.gigs.push(gig);
@@ -179,12 +189,34 @@ const db = {
         gig.workerBio = worker.bio || null;
         gig.workerIsMe = worker.name === ME_NAME;
         gig.matchedAt = Date.now();
+        // A fresh match always starts out unconfirmed on both sides.
+        gig.seekerConfirmed = false;
+        gig.employerConfirmed = false;
         writeState(state);
         return gig;
     },
 
-    // Seeker cancels their own matched shift (only allowed before the 1hr-before cutoff;
-    // that rule is enforced in the UI layer, not here). Gig goes back to the open pool.
+    confirmBySeeker(gigId) {
+        const state = readState();
+        const gig = state.gigs.find(g => g.id === gigId);
+        if (!gig) return null;
+        gig.seekerConfirmed = true;
+        writeState(state);
+        return gig;
+    },
+
+    confirmByEmployer(gigId) {
+        const state = readState();
+        const gig = state.gigs.find(g => g.id === gigId);
+        if (!gig) return null;
+        gig.employerConfirmed = true;
+        writeState(state);
+        return gig;
+    },
+
+    // Seeker cancels their own matched shift (only allowed before the 1hr-before cutoff
+    // and under the daily limit; those rules are enforced in the UI layer, not here).
+    // Gig goes back to the open pool.
     cancelBySeeker(gigId) {
         const state = readState();
         const gig = state.gigs.find(g => g.id === gigId);
@@ -194,8 +226,47 @@ const db = {
         gig.workerRating = null;
         gig.workerBio = null;
         gig.workerIsMe = false;
+        gig.seekerConfirmed = false;
         writeState(state);
         return gig;
+    },
+
+    // Returns { count, limit, canCancel } for the seeker's cancellations today.
+    getSeekerCancelStatus() {
+        const state = readState();
+        const today = todayDateStr();
+        const count = state.seekerProfile.cancelDate === today ? (state.seekerProfile.cancelCount || 0) : 0;
+        return { count, limit: SEEKER_DAILY_CANCEL_LIMIT, canCancel: count < SEEKER_DAILY_CANCEL_LIMIT };
+    },
+
+    incrementSeekerCancelCount() {
+        const state = readState();
+        const today = todayDateStr();
+        if (state.seekerProfile.cancelDate !== today) {
+            state.seekerProfile.cancelDate = today;
+            state.seekerProfile.cancelCount = 0;
+        }
+        state.seekerProfile.cancelCount += 1;
+        writeState(state);
+    },
+
+    // Returns { count, limit, canCancel } for the employer's free (pre-confirmation) cancellations today.
+    getEmployerCancelStatus() {
+        const state = readState();
+        const today = todayDateStr();
+        const count = state.employerCancelDate === today ? (state.employerCancelCount || 0) : 0;
+        return { count, limit: EMPLOYER_DAILY_CANCEL_LIMIT, canCancel: count < EMPLOYER_DAILY_CANCEL_LIMIT };
+    },
+
+    incrementEmployerCancelCount() {
+        const state = readState();
+        const today = todayDateStr();
+        if (state.employerCancelDate !== today) {
+            state.employerCancelDate = today;
+            state.employerCancelCount = 0;
+        }
+        state.employerCancelCount += 1;
+        writeState(state);
     },
 
     // Employer cancels a posted/matched gig outright (penalty, if any, is computed in the UI layer).

@@ -637,7 +637,7 @@ textarea {
 
 .btn-hero-secondary {
     flex: 1;
-    background: #F3F4F6;
+    background: #FFFFFF;
     border: 1px solid var(--border-color);
     color: var(--text-primary);
     padding: 12px;
@@ -653,7 +653,28 @@ textarea {
 }
 
 .btn-hero-secondary:hover {
-    background: #E5E7EB;
+    background: #F3F4F6;
+}
+
+.btn-hero-link {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    transition: color 0.2s ease;
+}
+
+.btn-hero-link:hover {
+    color: var(--text-primary);
 }
 
 .btn-hero-primary {
@@ -986,6 +1007,13 @@ textarea {
 .cancel-locked-note {
     font-size: 11px;
     color: var(--text-muted);
+    margin-left: auto;
+}
+
+.confirmed-note {
+    font-size: 11px;
+    color: #067A55;
+    font-weight: 700;
     margin-left: auto;
 }
 

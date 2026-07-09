@@ -58,6 +58,15 @@ function renderHeroResult(state) {
         return;
     }
 
+    const actions = lastMatched.seekerConfirmed
+        ? `<p class="result-sub confirmed-note"><i class="fa-solid fa-circle-check"></i> 확정된 근무입니다. 근무 현황에서 출근 체크를 진행해주세요.</p>`
+        : `
+            <div class="result-actions">
+                <button class="btn-hero-secondary" onclick="handleSeekerCancel('${lastMatched.id}')">매칭 취소</button>
+                <button class="btn-hero-primary" onclick="handleSeekerConfirm('${lastMatched.id}')">매칭 확정</button>
+            </div>
+        `;
+
     panel.innerHTML = `
         <div class="result-card">
             <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
@@ -71,12 +80,10 @@ function renderHeroResult(state) {
                     </div>
                     <div class="pay-badge"><i class="fa-solid fa-coins"></i> 시급 ${lastMatched.pay.toLocaleString()}원</div>
                 </div>
-                <div class="detail-item"><i class="fa-solid fa-clock"></i> ${lastMatched.startTime} ~ ${lastMatched.endTime}</div>
+                <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(lastMatched)}</div>
                 <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${lastMatched.location}</div>
             </div>
-            <div class="result-actions">
-                <button class="btn-hero-primary" onclick="resetSeekerHero()"><i class="fa-solid fa-bolt"></i> 다른 조건으로 다시 매칭</button>
-            </div>
+            ${actions}
         </div>
     `;
     setHeroStage('result');
@@ -266,10 +273,17 @@ function render(state) {
             if (gig.status === 'matched') {
                 statusLabel = `<span class="status-tag status-matched"><i class="fa-solid fa-handshake"></i> 매칭완료</span>`;
                 actionBtn = `<button class="btn-action-green" onclick="handleStartWork('${gig.id}')"><i class="fa-solid fa-play"></i> 출근 체크</button>`;
-                if (isPastCancelCutoff(gig)) {
+                if (gig.seekerConfirmed) {
+                    cancelBtn = `<span class="detail-item confirmed-note"><i class="fa-solid fa-circle-check"></i> 확정된 근무예요</span>`;
+                } else if (isPastCancelCutoff(gig)) {
                     cancelBtn = `<span class="detail-item cancel-locked-note"><i class="fa-solid fa-lock"></i> 출근 1시간 전이라 취소할 수 없어요</span>`;
                 } else {
-                    cancelBtn = `<button class="btn-cancel-teumta" onclick="handleSeekerCancel('${gig.id}')">틈타 취소</button>`;
+                    cancelBtn = `
+                        <div class="result-actions">
+                            <button class="btn-hero-secondary" onclick="handleSeekerCancel('${gig.id}')">매칭 취소</button>
+                            <button class="btn-hero-primary" onclick="handleSeekerConfirm('${gig.id}')">매칭 확정</button>
+                        </div>
+                    `;
                 }
             } else if (gig.status === 'working') {
                 statusLabel = `<span class="status-tag status-working"><i class="fa-solid fa-person-digging"></i> 근무중</span>`;
@@ -390,8 +404,16 @@ window.handleEndWork = function(gigId) {
     showToast('퇴근 도장이 찍혔습니다. 사장님 승인 후 정산됩니다.', 'info');
 };
 
-// Seeker-initiated cancel: only allowed before the 1hr-before-shift cutoff.
-// Per spec, cancelling immediately frees the slot up for another candidate.
+// Seeker confirms a match: locks it in permanently (no cancellation possible afterward).
+window.handleSeekerConfirm = function(gigId) {
+    if (!confirm('정말 확정하시겠습니까?\n확정 후에는 취소가 불가능합니다.')) return;
+    db.confirmBySeeker(gigId);
+    showToast('매칭이 확정되었습니다. 근무 시간에 맞춰 출근해주세요!', 'success');
+};
+
+// Seeker-initiated cancel: only allowed before the 1hr-before-shift cutoff and
+// under the daily limit. Per spec, cancelling immediately frees the slot up for
+// another candidate.
 window.handleSeekerCancel = function(gigId) {
     const state = db.getState();
     const gig = state.gigs.find(g => g.id === gigId);
@@ -401,8 +423,14 @@ window.handleSeekerCancel = function(gigId) {
         showToast('출근 1시간 전에는 취소할 수 없습니다.', 'info');
         return;
     }
-    if (!confirm('정말 이 근무를 취소하시겠습니까? 취소하면 다른 구직자에게 자리가 넘어갑니다.')) return;
+    const { canCancel, limit } = db.getSeekerCancelStatus();
+    if (!canCancel) {
+        showToast(`오늘은 이미 취소를 ${limit}번 사용했어요. 내일 다시 시도해주세요.`, 'info');
+        return;
+    }
+    if (!confirm(`정말 취소하시겠습니까?\n취소는 하루 ${limit}번만 가능하며, 근무 시작 시간 1시간 전부터는 취소가 불가능합니다.`)) return;
 
+    db.incrementSeekerCancelCount();
     db.cancelBySeeker(gigId);
     showToast('매칭이 취소되었습니다. 다른 구직자를 찾는 중이에요...', 'info');
 

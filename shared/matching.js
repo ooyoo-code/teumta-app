@@ -137,3 +137,14 @@ function calculatePenalty(gig) {
     const platformShare = penalty - seekerShare;
     return { penalty, seekerShare, platformShare };
 }
+
+// Daily cancel-count limits (pre-confirmation only; confirmed matches follow the
+// confirm/penalty rules instead, see db.js).
+const SEEKER_DAILY_CANCEL_LIMIT = 3;
+const EMPLOYER_DAILY_CANCEL_LIMIT = 1;
+
+function todayDateStr() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}

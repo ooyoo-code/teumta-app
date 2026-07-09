@@ -87,6 +87,12 @@ function renderHeroResult(gigId) {
     }
 
     if (gig.status === 'matched') {
+        const actions = gig.employerConfirmed
+            ? `<button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">취소 (위약금 발생)</button>`
+            : `
+                <button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">구인 취소</button>
+                <button class="btn-hero-primary employer-cta" onclick="handleEmployerConfirm('${gig.id}')">구인 확정</button>
+            `;
         panel.innerHTML = `
             <div class="result-card">
                 <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
@@ -104,9 +110,8 @@ function renderHeroResult(gigId) {
                     <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)}</div>
                     <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                 </div>
-                <div class="result-actions">
-                    <button class="btn-hero-primary employer-cta" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
-                </div>
+                <div class="result-actions">${actions}</div>
+                <button class="btn-hero-link" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
             </div>
         `;
     } else {
@@ -126,8 +131,9 @@ function renderHeroResult(gigId) {
                     <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                 </div>
                 <div class="result-actions">
-                    <button class="btn-hero-primary employer-cta" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
+                    <button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">구인 취소</button>
                 </div>
+                <button class="btn-hero-link" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
             </div>
         `;
     }
@@ -175,8 +181,16 @@ function render(state) {
                 ${trustBarHtml(gig.workerRating)}
                 ${gig.workerBio ? `<p class="job-desc">${gig.workerBio}</p>` : ''}
             `;
-            const cutoffPassed = isPastCancelCutoff(gig);
-            cancelBtn = `<button class="btn-cancel-teumta" onclick="handleEmployerCancel('${gig.id}')">${cutoffPassed ? '취소 (위약금 발생)' : '취소'}</button>`;
+            if (gig.employerConfirmed) {
+                cancelBtn = `<button class="btn-cancel-teumta" onclick="handleEmployerCancel('${gig.id}')">취소 (위약금 발생)</button>`;
+            } else {
+                cancelBtn = `
+                    <div class="result-actions">
+                        <button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">구인 취소</button>
+                        <button class="btn-hero-primary employer-cta" onclick="handleEmployerConfirm('${gig.id}')">구인 확정</button>
+                    </div>
+                `;
+            }
         } else if (gig.status === 'working') {
             statusBadge = `<span class="status-tag status-working"><i class="fa-solid fa-person-digging"></i> 현재 근무 중</span>`;
             workerPanel = `
@@ -224,12 +238,6 @@ function render(state) {
 // --- Actions ---
 // Date field defaults to today and can't go into the past. The day-of-week is
 // derived from it internally for availability matching, with no separate UI for it.
-function todayDateStr() {
-    const d = new Date();
-    const pad = n => String(n).padStart(2, '0');
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
 function resetGigDateField() {
     const dateInput = document.getElementById('gig-date');
     const todayStr = todayDateStr();
@@ -289,25 +297,42 @@ window.handleApprovePayment = function(gigId) {
     showToast(`근무 수당 ${earned.toLocaleString()}원 송금이 완료되었습니다.`, 'success');
 };
 
-// Employer cancel: free before the 1hr-before-shift cutoff, penalty (split with the platform) after.
+// Employer confirms a match: locks it in. Cancelling after this always incurs a penalty.
+window.handleEmployerConfirm = function(gigId) {
+    if (!confirm('구인 확정하시겠습니까?\n확정 이후 취소하시면 페널티가 발생합니다.')) return;
+    db.confirmByEmployer(gigId);
+    showToast('구인이 확정되었습니다.', 'success');
+};
+
+// Employer cancel: free before confirmation (1hr-before-shift cutoff + daily limit apply),
+// always a penalty (split with the platform) once the employer has confirmed the match.
 window.handleEmployerCancel = function(gigId) {
     const gig = db.getState().gigs.find(g => g.id === gigId);
     if (!gig) return;
 
-    if (gig.status === 'matched' && isPastCancelCutoff(gig)) {
+    if (gig.employerConfirmed) {
         const { penalty, seekerShare, platformShare } = calculatePenalty(gig);
         const ok = confirm(
-            `출근 1시간 이내 취소는 위약금이 발생합니다.\n\n` +
+            `구인 취소하시겠습니까?\n확정 이후 취소는 위약금이 발생합니다.\n\n` +
             `위약금: ${penalty.toLocaleString()}원\n` +
-            `(구직자 몫 ${seekerShare.toLocaleString()}원 / 플랫폼 몫 ${platformShare.toLocaleString()}원)\n\n` +
-            `취소하시겠습니까?`
+            `(구직자 몫 ${seekerShare.toLocaleString()}원 / 플랫폼 몫 ${platformShare.toLocaleString()}원)`
         );
         if (!ok) return;
         if (gig.workerIsMe) db.addEarnings(seekerShare);
         db.cancelByEmployer(gigId);
         showToast(`위약금 ${penalty.toLocaleString()}원이 발생했습니다 (구직자 ${seekerShare.toLocaleString()}원 / 플랫폼 ${platformShare.toLocaleString()}원). 구인이 취소되었습니다.`, 'info');
     } else {
-        if (!confirm('이 구인을 취소하시겠습니까?')) return;
+        if (isPastCancelCutoff(gig)) {
+            showToast('출근 1시간 전에는 취소할 수 없습니다.', 'info');
+            return;
+        }
+        const { canCancel, limit } = db.getEmployerCancelStatus();
+        if (!canCancel) {
+            showToast(`오늘은 이미 취소를 ${limit}번 사용했어요. 내일 다시 시도해주세요.`, 'info');
+            return;
+        }
+        if (!confirm(`구인 취소하시겠습니까?\n구인 취소는 하루 ${limit}번, 근무 시작 시간 1시간 전까지만 가능합니다.`)) return;
+        db.incrementEmployerCancelCount();
         db.cancelByEmployer(gigId);
         showToast('구인이 취소되었습니다.', 'info');
     }
