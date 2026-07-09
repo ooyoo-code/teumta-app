@@ -43,10 +43,20 @@ if (splash) {
         'assets/models/splash-model.glb',
         (gltf) => {
             model = gltf.scene;
+            model.updateMatrixWorld(true);
 
             // Center the model and scale it to a consistent on-screen size regardless
-            // of whatever units/scale it was exported with.
-            const box = new THREE.Box3().setFromObject(model);
+            // of whatever units/scale it was exported with. Box3.setFromObject() alone
+            // reports wildly inflated bounds for rigged/skinned meshes (it doesn't
+            // account for skinning correctly), so the box is built by hand from each
+            // mesh's own geometry bounds transformed into world space instead.
+            const box = new THREE.Box3();
+            model.traverse((obj) => {
+                if (!obj.isMesh) return;
+                obj.geometry.computeBoundingBox();
+                const meshBox = obj.geometry.boundingBox.clone().applyMatrix4(obj.matrixWorld);
+                box.union(meshBox);
+            });
             const size = box.getSize(new THREE.Vector3());
             const center = box.getCenter(new THREE.Vector3());
             const maxDim = Math.max(size.x, size.y, size.z) || 1;
