@@ -87,17 +87,21 @@ function renderHeroResult(gigId) {
     }
 
     if (gig.status === 'matched') {
+        const headline = gig.employerConfirmed ? `${gig.workerName}님으로 확정되었어요!` : `${gig.workerName}님이 매칭되었어요!`;
+        const sub = gig.employerConfirmed
+            ? '구인이 확정되었습니다. 취소하시면 위약금이 발생해요.'
+            : '등록된 근무 가능 시간이 맞는 구직자 중 랜덤으로 배정되었어요.';
         const actions = gig.employerConfirmed
-            ? `<button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">취소 (위약금 발생)</button>`
-            : `
+            ? ''
+            : `<div class="result-actions">
                 <button class="btn-hero-secondary" onclick="handleEmployerCancel('${gig.id}')">구인 취소</button>
                 <button class="btn-hero-primary employer-cta" onclick="handleEmployerConfirm('${gig.id}')">구인 확정</button>
-            `;
+            </div>`;
         panel.innerHTML = `
             <div class="result-card">
                 <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
-                <div class="result-headline">${gig.workerName}님이 매칭되었어요!</div>
-                <p class="result-sub">등록된 근무 가능 시간이 맞는 구직자 중 랜덤으로 배정되었어요.</p>
+                <div class="result-headline">${headline}</div>
+                <p class="result-sub">${sub}</p>
                 <div class="result-job-card">
                     <div class="worker-profile-mini">
                         <div class="worker-info-mini">
@@ -110,7 +114,7 @@ function renderHeroResult(gigId) {
                     <div class="detail-item"><i class="fa-solid fa-clock"></i> ${formatGigSchedule(gig)}</div>
                     <div class="detail-item"><i class="fa-solid fa-location-dot"></i> ${gig.location}</div>
                 </div>
-                <div class="result-actions">${actions}</div>
+                ${actions}
                 <button class="btn-hero-link" onclick="resetEmployerHero()"><i class="fa-solid fa-plus"></i> 새 구인 등록하기</button>
             </div>
         `;

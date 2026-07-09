@@ -58,6 +58,10 @@ function renderHeroResult(state) {
         return;
     }
 
+    const sub = lastMatched.seekerConfirmed
+        ? '매칭이 확정되었어요. 확정된 근무는 취소할 수 없어요.'
+        : '면접 없이 즉시 확정되었어요. 근무 시작 1시간 전까지는 취소할 수 있어요.';
+
     const actions = lastMatched.seekerConfirmed
         ? `<p class="result-sub confirmed-note"><i class="fa-solid fa-circle-check"></i> 확정된 근무입니다. 근무 현황에서 출근 체크를 진행해주세요.</p>`
         : `
@@ -71,7 +75,7 @@ function renderHeroResult(state) {
         <div class="result-card">
             <span class="result-badge success"><i class="fa-solid fa-circle-check"></i> 매칭 성공</span>
             <div class="result-headline">${lastMatched.title} 매칭 완료!</div>
-            <p class="result-sub">면접 없이 즉시 확정되었어요. 근무 시작 1시간 전까지는 취소할 수 있어요.</p>
+            <p class="result-sub">${sub}</p>
             <div class="result-job-card">
                 <div class="job-header">
                     <div class="job-badge-area">

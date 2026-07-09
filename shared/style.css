@@ -1019,7 +1019,7 @@ textarea {
 
 /* Recurring weekly availability: day-strip + hourly slot-grid */
 .schedule-card {
-    margin: 0 20px 24px 20px;
+    margin: 20px 20px 24px 20px;
 }
 
 .day-strip {
@@ -1379,9 +1379,16 @@ textarea {
    ========================================================================== */
 .onboarding-overlay {
     position: fixed;
-    inset: 0;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: 520px;
     z-index: 2000;
     background: var(--bg-main);
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
 }
 
 /* --- Onboarding intro cards (swipeable, scroll-snap) --- */
