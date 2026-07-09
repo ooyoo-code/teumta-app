@@ -1391,7 +1391,7 @@ textarea {
     border-right: 1px solid var(--border-color);
 }
 
-/* --- Splash: white background with a rotating 3D model (three.js) --- */
+/* --- Splash: white background with the looping mascot gif --- */
 .splash-screen {
     position: absolute;
     inset: 0;
@@ -1406,8 +1406,10 @@ textarea {
     display: flex;
 }
 
-.splash-3d-canvas {
+.splash-mascot-gif {
     display: block;
+    width: 220px;
+    height: auto;
 }
 
 .splash-tagline {

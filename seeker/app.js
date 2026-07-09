@@ -196,8 +196,16 @@ document.getElementById('btn-save-availability').addEventListener('click', () =>
     showToast('정기 근무 가능 시간이 저장되었습니다. 조건에 맞는 긴급 구인이 등록되면 자동 매칭 후보가 돼요.', 'success');
 });
 
-// --- First-launch Onboarding: intro cards -> availability setup ---
+// --- First-launch Onboarding: gif splash -> intro cards -> availability setup ---
 const ONBOARDING_KEY = 'teumta_onboarding_done';
+
+function startSplashSequence() {
+    const splash = document.getElementById('splash-screen');
+    setTimeout(() => {
+        splash.classList.remove('active');
+        document.getElementById('onboarding-cards').classList.add('active');
+    }, 4500);
+}
 
 function initOnboardingCards() {
     const track = document.getElementById('onboarding-track');
@@ -499,6 +507,7 @@ window.addEventListener('DOMContentLoaded', () => {
         document.getElementById('onboarding-overlay').remove();
     } else {
         initOnboardingCards();
+        startSplashSequence();
     }
 
     db.subscribe(render);

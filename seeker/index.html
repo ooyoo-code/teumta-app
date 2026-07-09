@@ -11,22 +11,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Custom CSS -->
     <link rel="stylesheet" href="../shared/style.css">
-    <!-- three.js (splash-screen 3D model viewer) -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
-            }
-        }
-    </script>
 </head>
 <body>
-    <!-- First-launch onboarding: 3D splash -> intro cards -> availability setup -->
+    <!-- First-launch onboarding: gif splash -> intro cards -> availability setup -->
     <div id="onboarding-overlay" class="onboarding-overlay">
 
         <div id="splash-screen" class="splash-screen active">
-            <canvas id="splash-3d-canvas" class="splash-3d-canvas"></canvas>
+            <img class="splash-mascot-gif" src="assets/images/splash-mascot.gif" alt="틈타 마스코트">
             <p class="splash-tagline">오늘도 여기저기서 틈타는 중<span class="dot-anim">...</span></p>
         </div>
 
@@ -297,6 +288,5 @@
     <script src="../shared/matching.js"></script>
     <script src="../shared/db.js"></script>
     <script src="app.js"></script>
-    <script type="module" src="splash3d.js"></script>
 </body>
 </html>
