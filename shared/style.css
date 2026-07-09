@@ -1391,6 +1391,32 @@ textarea {
     border-right: 1px solid var(--border-color);
 }
 
+/* --- Splash: white background with a rotating 3D model (three.js) --- */
+.splash-screen {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #FFFFFF;
+}
+
+.splash-screen.active {
+    display: flex;
+}
+
+.splash-3d-canvas {
+    display: block;
+}
+
+.splash-tagline {
+    margin-top: 16px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
 /* --- Onboarding intro cards (swipeable, scroll-snap) --- */
 .onboarding-cards {
     position: absolute;
