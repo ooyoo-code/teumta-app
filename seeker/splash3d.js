@@ -38,6 +38,7 @@ if (splash) {
     scene.add(fillLight);
 
     let model = null;
+    let mixer = null;
 
     new GLTFLoader().load(
         'assets/models/splash-model.glb',
@@ -66,6 +67,13 @@ if (splash) {
             model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
 
             scene.add(model);
+
+            // Play back the model's own embedded animation (e.g. the punch clip)
+            // instead of just spinning it in place.
+            if (gltf.animations && gltf.animations.length > 0) {
+                mixer = new THREE.AnimationMixer(model);
+                gltf.animations.forEach((clip) => mixer.clipAction(clip).play());
+            }
         },
         undefined,
         (err) => {
@@ -87,7 +95,7 @@ if (splash) {
         if (advanced) return;
         requestAnimationFrame(tick);
         const delta = clock.getDelta();
-        if (model) model.rotation.y += delta * 1.4;
+        if (mixer) mixer.update(delta);
         renderer.render(scene, camera);
     }
     tick();
