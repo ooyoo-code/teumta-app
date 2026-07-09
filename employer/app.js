@@ -393,6 +393,13 @@ function calculateHours(startTime, endTime) {
 
 // --- App Entrypoint ---
 window.addEventListener('DOMContentLoaded', () => {
+    // Visit with ?reset in the URL to always start from clean sample data — handy
+    // for repeatedly re-checking the app without manually clearing localStorage.
+    if (new URLSearchParams(location.search).has('reset')) {
+        db.resetToDefault();
+        history.replaceState({}, '', location.pathname);
+    }
+
     initSimulator();
     resetGigDateField();
     db.subscribe(render);

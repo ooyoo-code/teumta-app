@@ -483,6 +483,15 @@ function calculateHours(startTime, endTime) {
 
 // --- App Entrypoint ---
 window.addEventListener('DOMContentLoaded', () => {
+    // Visit with ?reset in the URL to always start from a clean, first-launch state
+    // (fresh sample data + onboarding shown again) — handy for repeatedly re-checking
+    // the app without manually clearing localStorage every time.
+    if (new URLSearchParams(location.search).has('reset')) {
+        db.resetToDefault();
+        localStorage.removeItem(ONBOARDING_KEY);
+        history.replaceState({}, '', location.pathname);
+    }
+
     initSimulator();
     initAvailabilityEditor('main', db.getState().seekerProfile.availability);
 
