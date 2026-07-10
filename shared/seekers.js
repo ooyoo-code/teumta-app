@@ -56,16 +56,15 @@ function isSeekerAvailable(availability, dayName, gigStart, gigEnd) {
     return isTimeWithin(day.start, day.end, gigStart, gigEnd);
 }
 
-// Dates (Mon-Sun) for the week containing `baseDate`, used by the day-strip UI.
-function getWeekDates(baseDate = new Date()) {
-    const dow = baseDate.getDay(); // 0=Sun..6=Sat
-    const diffToMonday = dow === 0 ? -6 : 1 - dow;
-    const monday = new Date(baseDate);
-    monday.setDate(baseDate.getDate() + diffToMonday);
+// `count` consecutive dates starting from `baseDate` (today by default), used by the
+// day-strip UI so the first tile is always today and swiping right reveals later dates.
+// The underlying availability is a recurring weekly pattern (keyed by 월~일), so tiles
+// past the first 7 just cycle back to the same weekday buckets with later calendar dates.
+function getUpcomingDates(count = 14, baseDate = new Date()) {
     const dates = [];
-    for (let i = 0; i < 7; i++) {
-        const d = new Date(monday);
-        d.setDate(monday.getDate() + i);
+    for (let i = 0; i < count; i++) {
+        const d = new Date(baseDate);
+        d.setDate(baseDate.getDate() + i);
         dates.push(d);
     }
     return dates;

@@ -119,7 +119,8 @@ const editorState = {};
 function initAvailabilityEditor(prefix, availability) {
     editorState[prefix] = {
         draft: JSON.parse(JSON.stringify(availability)),
-        selectedDay: todayKoreanDay()
+        selectedDay: todayKoreanDay(),
+        selectedIndex: 0
     };
     renderDayStrip(prefix);
     renderSlotGrid(prefix);
@@ -128,21 +129,23 @@ function initAvailabilityEditor(prefix, availability) {
 function renderDayStrip(prefix) {
     const editor = editorState[prefix];
     const container = document.getElementById(`${prefix}-day-strip`);
-    const dates = getWeekDates();
+    const dates = getUpcomingDates(14);
 
-    container.innerHTML = WEEK_DAYS.map((day, i) => {
-        const hasSlots = editor.draft[day] && editor.draft[day].enabled;
-        const isSelected = editor.selectedDay === day;
+    container.innerHTML = dates.map((date, i) => {
+        const dayName = JS_DAY_TO_KOREAN[date.getDay()];
+        const hasSlots = editor.draft[dayName] && editor.draft[dayName].enabled;
+        const isSelected = editor.selectedIndex === i;
         return `
-            <button type="button" class="day-tile ${isSelected ? 'selected' : ''} ${hasSlots ? 'has-slots' : ''}" data-day="${day}">
-                <span class="day-tile-name">${day}</span>
-                <span class="day-tile-date">${dates[i].getDate()}</span>
+            <button type="button" class="day-tile ${isSelected ? 'selected' : ''} ${hasSlots ? 'has-slots' : ''}" data-index="${i}" data-day="${dayName}">
+                <span class="day-tile-name">${i === 0 ? '오늘' : dayName}</span>
+                <span class="day-tile-date">${date.getDate()}</span>
             </button>
         `;
     }).join('');
 
     container.querySelectorAll('.day-tile').forEach(btn => {
         btn.addEventListener('click', () => {
+            editor.selectedIndex = Number(btn.dataset.index);
             editor.selectedDay = btn.dataset.day;
             renderDayStrip(prefix);
             renderSlotGrid(prefix);
@@ -162,7 +165,7 @@ function renderSlotGrid(prefix) {
         <div class="slot-grid-header">
             <span class="slot-grid-daylabel">${editor.selectedDay}요일</span>
             <label class="fullday-toggle">
-                <input type="checkbox" class="slot-fullday" ${day.fullDay ? 'checked' : ''}> 하루 종일 가능
+                <input type="checkbox" class="slot-fullday" ${day.fullDay ? 'checked' : ''}> 하루 종일
             </label>
         </div>
         <div class="slot-section-label">오전</div>
