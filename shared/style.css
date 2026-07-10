@@ -1407,22 +1407,21 @@ textarea {
 }
 
 .splash-mascot-gif {
-    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 330px;
     height: auto;
 }
 
 .splash-wordmark {
-    margin-top: 8px;
+    position: absolute;
+    left: 50%;
+    bottom: 12%;
+    transform: translateX(-50%);
     width: 160px;
     height: auto;
-}
-
-.splash-tagline {
-    margin-top: 16px;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-primary);
 }
 
 /* --- Onboarding intro cards (swipeable, scroll-snap) --- */
