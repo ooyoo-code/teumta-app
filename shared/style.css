@@ -1408,7 +1408,13 @@ textarea {
 
 .splash-mascot-gif {
     display: block;
-    width: 220px;
+    width: 330px;
+    height: auto;
+}
+
+.splash-wordmark {
+    margin-top: 8px;
+    width: 160px;
     height: auto;
 }
 
