@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "210 Computersetak";
+  src: url("/fonts/210-computersetak-light.woff2") format("woff2"),
+    url("/fonts/210-computersetak-light.ttf") format("truetype");
+  font-weight: 300;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "210 Computersetak";
+  src: url("/fonts/210-computersetak-regular.woff2") format("woff2"),
+    url("/fonts/210-computersetak-regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "210 Computersetak";
+  src: url("/fonts/210-computersetak-bold.woff2") format("woff2"),
+    url("/fonts/210-computersetak-bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
 :root {
   --background: #fffeb7;
   --foreground: #1a1a1a;
@@ -8,7 +32,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-noto-sans-kr);
+  --font-sans: "210 Computersetak", var(--font-noto-sans-kr);
 
   --color-brand-yellow: #fffeb7;
   --color-brand-cream: #fffbe8;

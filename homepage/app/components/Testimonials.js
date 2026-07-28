@@ -1,4 +1,4 @@
-import CoinMascot from "./CoinMascot";
+import Image from "next/image";
 
 const REVIEWS = [
   { name: "민준", quote: "이력서도 면접도 없이 1시간 만에 매칭됐어요.\n이게 진짜 되네요,,," },
@@ -11,7 +11,13 @@ export default function Testimonials() {
     <section className="bg-black">
       <div className="mx-auto max-w-6xl px-5 py-16 sm:py-24">
         <div className="flex flex-col sm:flex-row items-center gap-10 sm:gap-16 mb-12">
-          <CoinMascot color="#ffd54f" size={140} />
+          <Image
+            src="/images/magnifier-mascot.png"
+            alt="리뷰 확인 중인 틈타 마스코트"
+            width={520}
+            height={440}
+            className="w-40 sm:w-56 h-auto"
+          />
           <h2 className="text-3xl sm:text-5xl font-black text-brand-lime text-center sm:text-left">
             리뷰로 검증된
             <br />

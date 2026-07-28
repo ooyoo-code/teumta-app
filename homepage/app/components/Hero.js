@@ -1,7 +1,5 @@
 import Image from "next/image";
 
-const DEMO_URL = "https://ooyoo-code.github.io/teumta-app/seeker/?reset";
-
 export default function Hero() {
   return (
     <section className="bg-brand-yellow">
@@ -13,19 +11,13 @@ export default function Hero() {
           <p className="mt-3 text-lg sm:text-2xl font-medium text-brand-orange">
             비는 시간에 AI가 딱 맞는 알바를 찾아드려요
           </p>
-          <a
-            href={DEMO_URL}
-            className="mt-8 inline-block rounded-full bg-brand-orange text-white text-base sm:text-lg font-bold px-7 py-3.5 hover:brightness-95 transition"
-          >
-            데모 보러가기
-          </a>
         </div>
         <div className="flex-1 flex justify-center">
           <Image
-            src="/images/mascot.png"
+            src="/images/hero-mascot.png"
             alt="틈타 마스코트"
-            width={340}
-            height={340}
+            width={545}
+            height={540}
             className="w-56 sm:w-80 h-auto"
             priority
           />
