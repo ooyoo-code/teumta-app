@@ -1,0 +1,4 @@
+:HL["/teumta-app/homepage-site/_next/static/chunks/2jqj_a1j50b8s.css","style"]
+:HL["/teumta-app/homepage-site/_next/static/chunks/00bh6h5t354q_.css","style"]
+:HL["/teumta-app/homepage-site/_next/static/media/fca78c2ee6cec166-s.p.1sn26-iqxrgtp.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}},"staleTime":300,"buildId":"LqVATnVt-560Wem3cn6Zj"}
