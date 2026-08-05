@@ -391,6 +391,16 @@ body {
     animation: coinFloat 3s ease-in-out infinite;
 }
 
+.hero-banner-wrap {
+    margin: -28px -22px 18px -22px;
+}
+
+.hero-banner-img {
+    display: block;
+    width: 100%;
+    height: auto;
+}
+
 .hero-title {
     font-size: 22px;
     font-weight: 800;
